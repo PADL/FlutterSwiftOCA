@@ -5,11 +5,18 @@ import PackageDescription
 
 let package = Package(
     name: "FlutterSwiftOCA",
+    platforms: [
+        // specify each minimum deployment requirement,
+        // otherwise the platform default minimum is used.
+        .macOS(.v10_15),
+    ],
     products: [
-        // Products define the executables and libraries a package produces, and make them visible to other packages.
+        // Products define the executables and libraries a package produces, and make them visible
+        // to other packages.
         .library(
             name: "FlutterSwiftOCA",
-            targets: ["FlutterSwiftOCA"]),
+            targets: ["FlutterSwiftOCA"]
+        ),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -17,13 +24,20 @@ let package = Package(
         .package(url: "https://github.com/PADL/FlutterSwift", branch: "main"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package. A target can define a module or a test suite.
-        // Targets can depend on other targets in this package, and on products in packages this package depends on.
+        // Targets are the basic building blocks of a package. A target can define a module or a
+        // test suite.
+        // Targets can depend on other targets in this package, and on products in packages this
+        // package depends on.
         .target(
             name: "FlutterSwiftOCA",
-            dependencies: []),
+            dependencies: [
+                "SwiftOCA",
+                "FlutterSwift",
+            ]
+        ),
         .testTarget(
             name: "FlutterSwiftOCATests",
-            dependencies: ["FlutterSwiftOCA"]),
+            dependencies: ["FlutterSwiftOCA"]
+        ),
     ]
 )

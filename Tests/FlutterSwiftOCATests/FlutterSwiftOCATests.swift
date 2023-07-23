@@ -1,5 +1,4 @@
-import XCTest
 @testable import FlutterSwiftOCA
+import XCTest
 
-final class FlutterSwiftOCATests: XCTestCase {
-}
+final class FlutterSwiftOCATests: XCTestCase {}
