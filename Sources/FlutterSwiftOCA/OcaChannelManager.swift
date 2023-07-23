@@ -24,6 +24,7 @@ import SwiftOCA
 public actor OcaChannelManager {
     public typealias Event = OcaPropertyChangedEventData<AnyCodable>
 
+    public static let OcaControlChannelSuffix = "control"
     public static let OcaEventChannelSuffix = "event"
     public static let OcaMethodChannelSuffix = "method"
 
@@ -31,20 +32,59 @@ public actor OcaChannelManager {
         "com.padl.OcaChannelManager.MissingObjectNumberError"
     public static let NoSuchObjectError = "com.padl.OcaChannelManager.NoSuchObjectError"
     public static let MissingPropertiesError = "com.padl.OcaChannelManager.MissingPropertiesError"
+    public static let DeviceError = "com.padl.OcaChannelManaegr.DeviceError"
+    public static let UnknownControlMethodError =
+        "com.padl.OcaChannelManager.UnknownControlMethodError"
 
     private let connection: AES70OCP1Connection
     private let binaryMessenger: FlutterBinaryMessenger
-    private var eventChannels = [OcaONo: FlutterEventChannel]()
+    private let controlChannel: FlutterMethodChannel
+    private let eventChannel: FlutterEventChannel
+    private var methodChannels = [OcaONo: FlutterMethodChannel]()
 
     init(
         connection: AES70OCP1Connection,
         binaryMessenger: FlutterBinaryMessenger
-    ) {
+    ) async throws {
         self.connection = connection
         self.binaryMessenger = binaryMessenger
+
+        controlChannel = FlutterMethodChannel(
+            name: "\(connection.connectionPrefix)/\(Self.OcaControlChannelSuffix)",
+            binaryMessenger: binaryMessenger
+        )
+        eventChannel = FlutterEventChannel(
+            name: "\(connection.connectionPrefix)/\(Self.OcaEventChannelSuffix)",
+            binaryMessenger: binaryMessenger
+        )
+
+        try await controlChannel.setMethodCallHandler(onControl)
+        try await eventChannel.setStreamHandler(onListen: onEventListen, onCancel: onEventCancel)
+
+        try await connection.connect()
     }
 
-    deinit {}
+    deinit {
+        Task {
+            try? await connection.disconnect()
+        }
+    }
+
+    func onControl(
+        call: FlutterMethodCall<OcaObjectIdentification>
+    ) async throws -> Bool? {
+        switch call.method {
+        case "resolve":
+            var objectIdentification = call.arguments
+
+            if objectIdentification == nil {
+                objectIdentification = await connection.rootBlock.objectIdentification
+            }
+            return await connection.resolve(object: objectIdentification!) != nil
+        default:
+            throw FlutterError(code: Self.UnknownControlMethodError, details: call.method)
+        }
+    }
 
     func onEventListen(_ oNo: OcaONo?) async throws -> FlutterEventStream<Event> {
         guard let oNo else {
@@ -82,13 +122,35 @@ public actor OcaChannelManager {
 
     func onEventCancel(_ oNo: OcaONo?) async throws {}
 
-    func registerEventChannel() async throws -> FlutterEventChannel {
-        let eventChannel = FlutterEventChannel(
-            name: "\(connection.connectionPrefix)/\(Self.OcaEventChannelSuffix)",
+    func onMethodCall(
+        oNo: OcaONo,
+        call: FlutterMethodCall<Ocp1Parameters>
+    ) async throws -> Ocp1Response {
+        do {
+            guard let object = await connection.resolve(cachedObject: oNo) else {
+                throw FlutterError(code: Self.NoSuchObjectError, details: oNo)
+            }
+            return try await object.sendCommandRrq(
+                methodID: OcaMethodID(call.method),
+                parameterCount: call.arguments?
+                    .parameterCount ?? 0,
+                parameterData: call.arguments?
+                    .parameterData ?? Data()
+            )
+        } catch let error as Ocp1Error {
+            throw FlutterError(code: Self.DeviceError, details: String(describing: error))
+        }
+    }
+
+    func registerMethodChannel(oNo: OcaONo) async throws {
+        let methodChannel = FlutterMethodChannel(
+            name: "\(connection.connectionPrefix)/\(oNo)/\(Self.OcaMethodChannelSuffix)",
             binaryMessenger: binaryMessenger
         )
-        try await eventChannel.setStreamHandler(onListen: onEventListen, onCancel: onEventCancel)
-        return eventChannel
+        try await methodChannel.setMethodCallHandler { call in
+            try await self.onMethodCall(oNo: oNo, call: call)
+        }
+        methodChannels[oNo] = methodChannel
     }
 }
 
@@ -98,7 +160,7 @@ extension OcaPropertyRepresentable {
     {
         subject.map {
             OcaPropertyChangedEventData<AnyCodable>(
-                propertyID: propertyIDs.first!,
+                propertyID: propertyIDs.first!, // FIXME: doesn't work with multiple propertyIDs
                 propertyValue: AnyCodable($0),
                 changeType: .currentChanged
             )
