@@ -6,13 +6,9 @@ import PackageDescription
 let package = Package(
     name: "FlutterSwiftOCA",
     platforms: [
-        // specify each minimum deployment requirement,
-        // otherwise the platform default minimum is used.
         .macOS(.v10_15),
     ],
     products: [
-        // Products define the executables and libraries a package produces, and make them visible
-        // to other packages.
         .library(
             name: "FlutterSwiftOCA",
             targets: ["FlutterSwiftOCA"]
@@ -20,6 +16,9 @@ let package = Package(
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
+        .package(url: "https://github.com/apple/swift-async-algorithms", from: "0.1.0"),
+        .package(url: "https://github.com/lhoward/AsyncExtensions", branch: "linux"),
+        .package(url: "https://github.com/Flight-School/AnyCodable", from: "0.0.0"),
         .package(url: "https://github.com/PADL/SwiftOCA", branch: "main"),
         .package(url: "https://github.com/PADL/FlutterSwift", branch: "main"),
     ],
@@ -31,6 +30,9 @@ let package = Package(
         .target(
             name: "FlutterSwiftOCA",
             dependencies: [
+                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
+                "AsyncExtensions",
+                "AnyCodable",
                 "SwiftOCA",
                 "FlutterSwift",
             ]
