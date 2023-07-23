@@ -42,7 +42,7 @@ public actor OcaChannelManager {
     private let eventChannel: FlutterEventChannel
     private var methodChannels = [OcaONo: FlutterMethodChannel]()
 
-    init(
+    public init(
         connection: AES70OCP1Connection,
         binaryMessenger: FlutterBinaryMessenger
     ) async throws {
