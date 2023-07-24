@@ -74,26 +74,27 @@ public actor OcaChannelManager {
     func onControl(
         call: FlutterMethodCall<OcaObjectIdentification>
     ) async throws -> Bool? {
-        switch call.method {
-        case "connect":
-            try await throwingFlutterError {
+        try await throwingFlutterError {
+            switch call.method {
+            case "connect":
                 try await connection.connect()
-            }
-        case "disconnect":
-            try await throwingFlutterError {
+            case "disconnect":
                 try await connection.disconnect()
-            }
-        case "resolve":
-            var objectIdentification = call.arguments
+            case "resolve":
+                var objectIdentification = call.arguments
 
-            if objectIdentification == nil {
-                objectIdentification = await connection.rootBlock.objectIdentification
+                if objectIdentification == nil {
+                    objectIdentification = await connection.rootBlock.objectIdentification
+                }
+                guard await connection.resolve(object: objectIdentification!) != nil else {
+                    return false
+                }
+                try await registerMethodChannel(oNo: objectIdentification!.oNo)
+            default:
+                throw FlutterError(code: Self.UnknownControlMethodError, details: call.method)
             }
-            return await connection.resolve(object: objectIdentification!) != nil
-        default:
-            throw FlutterError(code: Self.UnknownControlMethodError, details: call.method)
+            return true
         }
-        return true
     }
 
     func onEventListen(_ oNo: OcaONo?) async throws -> FlutterEventStream<Event> {
@@ -151,6 +152,7 @@ public actor OcaChannelManager {
     }
 
     func registerMethodChannel(oNo: OcaONo) async throws {
+        guard methodChannels[oNo] == nil else { return }
         let methodChannel = FlutterMethodChannel(
             name: "\(connection.connectionPrefix)/\(oNo)/\(Self.OcaMethodChannelSuffix)",
             binaryMessenger: binaryMessenger
