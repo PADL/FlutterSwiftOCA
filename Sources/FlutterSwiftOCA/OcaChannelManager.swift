@@ -61,11 +61,16 @@ public actor OcaChannelManager {
         try await controlChannel.setMethodCallHandler(onControl)
         try await eventChannel.setStreamHandler(onListen: onEventListen, onCancel: onEventCancel)
 
+        debugPrint("Initialized OcaChannelManager with connection \(connection), connecting...")
+
         try await connection.connect()
     }
 
     deinit {
         Task {
+            debugPrint(
+                "Deinitializing OcaChannelManager with connection \(connection), disconnecting."
+            )
             try? await connection.disconnect()
         }
     }
