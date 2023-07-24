@@ -31,5 +31,5 @@ Events are emitted as `OcaPropertyChangedEventData` with the type `.currentChang
 Method channel
 --------------
 
-Channel suffix is `method`. Arguments are `Ocp1Parameters` which are passed directly to the device, returning a `Ocp1Response`.
+Channel suffix is `method/<oNo>`. Method name is the string form of the OCA method. Arguments are `Ocp1Parameters` which are passed directly to the device, returning a `Ocp1Response`.
 
