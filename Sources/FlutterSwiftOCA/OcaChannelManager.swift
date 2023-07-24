@@ -32,9 +32,10 @@ public actor OcaChannelManager {
         "com.padl.OcaChannelManager.MissingObjectNumberError"
     public static let NoSuchObjectError = "com.padl.OcaChannelManager.NoSuchObjectError"
     public static let MissingPropertiesError = "com.padl.OcaChannelManager.MissingPropertiesError"
-    public static let DeviceError = "com.padl.OcaChannelManaegr.DeviceError"
+    public static let DeviceError = "com.padl.OcaChannelManager.DeviceError"
     public static let UnknownControlMethodError =
         "com.padl.OcaChannelManager.UnknownControlMethodError"
+    public static let ConnectionError = "com.padl.OcaChannelManager.ConnectionError"
 
     private let connection: AES70OCP1Connection
     private let binaryMessenger: FlutterBinaryMessenger
@@ -60,18 +61,13 @@ public actor OcaChannelManager {
 
         try await controlChannel.setMethodCallHandler(onControl)
         try await eventChannel.setStreamHandler(onListen: onEventListen, onCancel: onEventCancel)
-
-        debugPrint("Initialized OcaChannelManager with connection \(connection), connecting...")
-
-        try await connection.connect()
     }
 
-    deinit {
-        Task {
-            debugPrint(
-                "Deinitializing OcaChannelManager with connection \(connection), disconnecting."
-            )
-            try? await connection.disconnect()
+    func throwingFlutterError<T>(_ block: () async throws -> T) async throws -> T {
+        do {
+            return try await block()
+        } catch let error as Ocp1Error {
+            throw error.asFlutterError(Self.DeviceError)
         }
     }
 
@@ -79,6 +75,16 @@ public actor OcaChannelManager {
         call: FlutterMethodCall<OcaObjectIdentification>
     ) async throws -> Bool? {
         switch call.method {
+        case "connect":
+            try await throwingFlutterError {
+                try await connection.connect()
+            }
+            return true
+        case "disconnect":
+            try await throwingFlutterError {
+                try await connection.disconnect()
+            }
+            return true
         case "resolve":
             var objectIdentification = call.arguments
 
@@ -131,7 +137,7 @@ public actor OcaChannelManager {
         oNo: OcaONo,
         call: FlutterMethodCall<Ocp1Parameters>
     ) async throws -> Ocp1Response {
-        do {
+        try await throwingFlutterError {
             guard let object = await connection.resolve(cachedObject: oNo) else {
                 throw FlutterError(code: Self.NoSuchObjectError, details: oNo)
             }
@@ -142,8 +148,6 @@ public actor OcaChannelManager {
                 parameterData: call.arguments?
                     .parameterData ?? Data()
             )
-        } catch let error as Ocp1Error {
-            throw FlutterError(code: Self.DeviceError, details: String(describing: error))
         }
     }
 
@@ -170,5 +174,11 @@ extension OcaPropertyRepresentable {
                 changeType: .currentChanged
             )
         }.eraseToAnyAsyncSequence()
+    }
+}
+
+extension Ocp1Error {
+    func asFlutterError(_ code: String) -> FlutterError {
+        FlutterError(code: code, details: String(describing: self))
     }
 }
