@@ -79,12 +79,10 @@ public actor OcaChannelManager {
             try await throwingFlutterError {
                 try await connection.connect()
             }
-            return true
         case "disconnect":
             try await throwingFlutterError {
                 try await connection.disconnect()
             }
-            return true
         case "resolve":
             var objectIdentification = call.arguments
 
@@ -95,6 +93,7 @@ public actor OcaChannelManager {
         default:
             throw FlutterError(code: Self.UnknownControlMethodError, details: call.method)
         }
+        return true
     }
 
     func onEventListen(_ oNo: OcaONo?) async throws -> FlutterEventStream<Event> {
