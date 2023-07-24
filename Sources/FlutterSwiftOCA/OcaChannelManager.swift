@@ -90,13 +90,19 @@ public actor OcaChannelManager {
                     return false
                 }
                 try await registerMethodChannel(oNo: objectIdentification!.oNo)
-            case "deregister":
+            case "registerMethodChannel":
+                fallthrough
+            case "deregisterMethodChannel":
                 var objectNumber = call.arguments?.oNo
 
                 if objectNumber == nil {
                     objectNumber = await connection.rootBlock.objectNumber
                 }
-                try await deregisterMethodChannel(oNo: objectNumber!)
+                if call.method == "register" {
+                    try await registerMethodChannel(oNo: objectNumber!)
+                } else {
+                    try await deregisterMethodChannel(oNo: objectNumber!)
+                }
             default:
                 throw FlutterError(code: Self.UnknownControlMethodError, details: call.method)
             }
