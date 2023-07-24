@@ -90,6 +90,13 @@ public actor OcaChannelManager {
                     return false
                 }
                 try await registerMethodChannel(oNo: objectIdentification!.oNo)
+            case "deregister":
+                var objectNumber = call.arguments?.oNo
+
+                if objectNumber == nil {
+                    objectNumber = await connection.rootBlock.objectNumber
+                }
+                try await deregisterMethodChannel(oNo: objectNumber!)
             default:
                 throw FlutterError(code: Self.UnknownControlMethodError, details: call.method)
             }
@@ -151,16 +158,25 @@ public actor OcaChannelManager {
         }
     }
 
+    private func methodChannelName(for oNo: OcaONo) -> String {
+        "\(connection.connectionPrefix)/\(oNo)/\(Self.OcaMethodChannelSuffix)"
+    }
+
     func registerMethodChannel(oNo: OcaONo) async throws {
         guard methodChannels[oNo] == nil else { return }
         let methodChannel = FlutterMethodChannel(
-            name: "\(connection.connectionPrefix)/\(oNo)/\(Self.OcaMethodChannelSuffix)",
+            name: methodChannelName(for: oNo),
             binaryMessenger: binaryMessenger
         )
         try await methodChannel.setMethodCallHandler { call in
             try await self.onMethodCall(oNo: oNo, call: call)
         }
         methodChannels[oNo] = methodChannel
+    }
+
+    func deregisterMethodChannel(oNo: OcaONo) async throws {
+        // removing last reference will call removeMessageHandler()
+        methodChannels.removeValue(forKey: oNo)
     }
 }
 
