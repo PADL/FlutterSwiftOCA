@@ -24,7 +24,16 @@
       "location" : "https://github.com/PADL/FlutterSwift",
       "state" : {
         "branch" : "main",
-        "revision" : "1b25d9cd8680e7d5c4cf05d09252d35eededbc0d"
+        "revision" : "2b098b1d170754e11205b71ad3d528641bc439b8"
+      }
+    },
+    {
+      "identity" : "flyingfox",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swhitty/FlyingFox",
+      "state" : {
+        "branch" : "main",
+        "revision" : "8b195ab596666776815c68c614e7f061075945e9"
       }
     },
     {
@@ -69,7 +78,7 @@
       "location" : "https://github.com/PADL/SwiftOCA",
       "state" : {
         "branch" : "main",
-        "revision" : "d6ab5cd3411784be146ca2e9ae0a47873beb1c5d"
+        "revision" : "31944d50e4effbbfe90f676958c6423fa671bc16"
       }
     }
   ],

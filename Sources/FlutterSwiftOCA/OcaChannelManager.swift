@@ -190,7 +190,7 @@ extension OcaPropertyRepresentable {
     func eraseToAnyAsyncSequenceOfPropertyChangedEventData()
         -> AnyAsyncSequence<OcaPropertyChangedEventData<AnyCodable>?>
     {
-        subject.map {
+        async.map {
             OcaPropertyChangedEventData<AnyCodable>(
                 propertyID: propertyIDs.first!, // FIXME: doesn't work with multiple propertyIDs
                 propertyValue: AnyCodable($0),
