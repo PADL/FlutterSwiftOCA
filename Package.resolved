@@ -37,15 +37,6 @@
       }
     },
     {
-      "identity" : "opencombine",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/OpenCombine/OpenCombine.git",
-      "state" : {
-        "revision" : "8576f0d579b27020beccbccc3ea6844f3ddfc2c2",
-        "version" : "0.14.0"
-      }
-    },
-    {
       "identity" : "swift-async-algorithms",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-async-algorithms",
@@ -78,7 +69,7 @@
       "location" : "https://github.com/PADL/SwiftOCA",
       "state" : {
         "branch" : "main",
-        "revision" : "31944d50e4effbbfe90f676958c6423fa671bc16"
+        "revision" : "fc93f8cd61b543085ef572be309edde77229f152"
       }
     }
   ],
