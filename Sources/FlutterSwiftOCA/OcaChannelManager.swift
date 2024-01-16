@@ -110,7 +110,7 @@ public actor OcaChannelManager {
         }
     }
 
-    func onEventListen(_ oNo: OcaONo?) async throws -> FlutterEventStream<Event> {
+    @Sendable func onEventListen(_ oNo: OcaONo?) async throws -> FlutterEventStream<Event> {
         guard let oNo else {
             throw FlutterError(code: Self.MissingObjectNumberError)
         }
@@ -144,7 +144,7 @@ public actor OcaChannelManager {
         return mergedPropertyEventStream
     }
 
-    func onEventCancel(_ oNo: OcaONo?) async throws {}
+    @Sendable func onEventCancel(_ oNo: OcaONo?) async throws {}
 
     func onMethodCall(
         oNo: OcaONo,
