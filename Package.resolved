@@ -33,7 +33,7 @@
       "location" : "https://github.com/PADL/IORingSwift",
       "state" : {
         "branch" : "main",
-        "revision" : "f1448df074dec04c70b837e69c48add461887e02"
+        "revision" : "5d153338ab4844eb620f731124b8051a090295f9"
       }
     },
     {
@@ -68,8 +68,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log",
       "state" : {
-        "revision" : "532d8b529501fb73a2455b179e0bbb6d49b652ed",
-        "version" : "1.5.3"
+        "branch" : "main",
+        "revision" : "c1ff8be7bc1d877eb24d1ce76b1dd89605160347"
       }
     },
     {
@@ -78,7 +78,7 @@
       "location" : "https://github.com/PADL/SwiftOCA",
       "state" : {
         "branch" : "main",
-        "revision" : "d8e3fb8864514b86453d549f4cf1e83b27f04180"
+        "revision" : "35407c8ca3f7b381300fc1b60640c5f404ff52fe"
       }
     }
   ],

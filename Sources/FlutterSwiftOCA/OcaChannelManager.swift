@@ -37,14 +37,14 @@ public actor OcaChannelManager {
         "com.padl.OcaChannelManager.UnknownControlMethodError"
     public static let ConnectionError = "com.padl.OcaChannelManager.ConnectionError"
 
-    private let connection: AES70OCP1Connection
+    private let connection: Ocp1Connection
     private let binaryMessenger: FlutterBinaryMessenger
     private let controlChannel: FlutterMethodChannel
     private let eventChannel: FlutterEventChannel
     private var methodChannels = [OcaONo: FlutterMethodChannel]()
 
     public init(
-        connection: AES70OCP1Connection,
+        connection: Ocp1Connection,
         binaryMessenger: FlutterBinaryMessenger
     ) async throws {
         self.connection = connection
