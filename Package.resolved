@@ -33,7 +33,7 @@
       "location" : "https://github.com/PADL/IORingSwift",
       "state" : {
         "branch" : "main",
-        "revision" : "5d153338ab4844eb620f731124b8051a090295f9"
+        "revision" : "c2e2766f1222136379f4f74e556374d7da68b8b6"
       }
     },
     {
@@ -78,7 +78,7 @@
       "location" : "https://github.com/PADL/SwiftOCA",
       "state" : {
         "branch" : "main",
-        "revision" : "35407c8ca3f7b381300fc1b60640c5f404ff52fe"
+        "revision" : "32e7eb69163b54a2b8acbc3c09a7835567874255"
       }
     }
   ],
