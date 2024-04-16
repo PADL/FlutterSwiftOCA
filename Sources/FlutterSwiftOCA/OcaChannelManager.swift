@@ -58,6 +58,63 @@ private extension FixedWidthInteger {
     }
 }
 
+private extension OcaRoot {
+    func propertySubject(with propertyID: OcaPropertyID) -> (any OcaPropertySubjectRepresentable)? {
+        for (_, keyPath) in allPropertyKeyPaths {
+            if let property =
+                self[keyPath: keyPath] as? any OcaPropertySubjectRepresentable,
+                property.propertyIDs.contains(propertyID)
+            {
+                return property
+            }
+        }
+
+        return nil
+    }
+}
+
+private func isNil(_ value: Any) -> Bool {
+    if let value = value as? ExpressibleByNilLiteral {
+        let value = value as Any?
+        if case .none = value {
+            return true
+        }
+    }
+    return false
+}
+
+private extension FlutterStandardVariant {
+    init(ocaValue value: Any) throws {
+        if isNil(value) {
+            self = .nil
+        } else if let value = value as? (any RawRepresentable),
+                  let rawValue = value.rawValue as? (any FixedWidthInteger),
+                  let int32RawValue = rawValue.int32Value
+        {
+            self = .int32(int32RawValue)
+        } else {
+            try self.init(value)
+        }
+    }
+
+    func ocaValue(_ type: Any.Type) throws -> Any {
+        if let type = type as? any CaseIterable.Type,
+           case let .int32(int32RawValue) = self,
+           let enumValue = type.value(for: int32RawValue)
+        {
+            return enumValue
+        } else if self == .nil {
+            guard type is ExpressibleByNilLiteral else {
+                throw Ocp1Error.status(.parameterError)
+            }
+            let vnil: Any! = nil
+            return vnil as Any
+        } else {
+            return self
+        }
+    }
+}
+
 @OcaConnection
 public final class OcaChannelManager {
     private let connection: Ocp1Connection
@@ -190,27 +247,13 @@ public final class OcaChannelManager {
                 throw Ocp1Error.objectNotPresent
             }
 
-            for (_, keyPath) in object.allPropertyKeyPaths {
-                guard let property =
-                    object[keyPath: keyPath] as? any OcaPropertySubjectRepresentable,
-                    property.propertyIDs.contains(target.propertyID)
-                else {
-                    continue
-                }
-
-                let value = try await property._getValue(object, flags: [])
-                if let value = value as? (any RawRepresentable),
-                   let rawValue = value.rawValue as? (any FixedWidthInteger),
-                   let int32RawValue = rawValue.int32Value
-                {
-                    return FlutterStandardVariant.int32(int32RawValue)
-                } else {
-                    return try FlutterStandardVariant(value)
-                }
+            guard let property = object.propertySubject(with: target.propertyID) else {
+                logger.error("could not locate property \(target.propertyID) on \(object)")
+                throw Ocp1Error.status(.processingFailed)
             }
 
-            logger.error("could not locate property \(target.propertyID) on \(object)")
-            throw Ocp1Error.status(.processingFailed)
+            let value = try await property._getValue(object, flags: [])
+            return try FlutterStandardVariant(ocaValue: value)
         }
     }
 
@@ -225,30 +268,17 @@ public final class OcaChannelManager {
                 throw Ocp1Error.objectNotPresent
             }
 
-            for (_, keyPath) in object.allPropertyKeyPaths {
-                guard let property =
-                    object[keyPath: keyPath] as? any OcaPropertySubjectRepresentable,
-                    property.propertyIDs.contains(target.propertyID)
-                else {
-                    continue
-                }
-                logger
-                    .trace(
-                        "setting property \(target.propertyID) on object \(object) to \(value)"
-                    )
-                if let rawValueType = property.valueType as? any CaseIterable.Type,
-                   case let .int32(int32RawValue) = value,
-                   let enumValue = rawValueType.value(for: int32RawValue)
-                {
-                    try await property._setValue(object, enumValue)
-                } else {
-                    try await property._setValue(object, value)
-                }
-                return FlutterStandardVariant.nil
+            guard let property = object.propertySubject(with: target.propertyID) else {
+                logger.error("could not locate property \(target.propertyID) on \(object)")
+                throw Ocp1Error.status(.processingFailed)
             }
 
-            logger.error("could not locate property \(target.propertyID) on \(object)")
-            throw Ocp1Error.status(.processingFailed)
+            logger
+                .trace(
+                    "setting property \(target.propertyID) on object \(object) to \(value)"
+                )
+            try await property._setValue(object, value.ocaValue(property.valueType))
+            return FlutterStandardVariant.nil
         }
     }
 
@@ -263,17 +293,14 @@ public final class OcaChannelManager {
                 throw Ocp1Error.objectNotPresent
             }
 
-            for (_, keyPath) in object.allPropertyKeyPaths {
-                if let property = object[keyPath: keyPath] as? any OcaPropertyRepresentable,
-                   property.propertyIDs.contains(target.propertyID)
-                {
-                    await property.subscribe(object)
-                    logger.trace("subscribed object \(object) property \(target.propertyID)")
-                    return property.eraseToFlutterEventStream()
-                }
+            guard let property = object.propertySubject(with: target.propertyID) else {
+                logger.error("could not locate property \(target.propertyID) on \(object)")
+                throw Ocp1Error.status(.processingFailed)
             }
 
-            throw Ocp1Error.status(.processingFailed)
+            await property.subscribe(object)
+            logger.trace("subscribed object \(object) property \(target.propertyID)")
+            return property.eraseToFlutterEventStream()
         }
     }
 
@@ -308,14 +335,7 @@ extension OcaPropertyRepresentable {
     {
         async.compactMap {
             guard let value = try? $0.get() else { return .nil }
-            if let value = value as? (any RawRepresentable),
-               let rawValue = value.rawValue as? (any FixedWidthInteger),
-               let int32RawValue = rawValue.int32Value
-            {
-                return FlutterStandardVariant.int32(int32RawValue)
-            } else {
-                return try? FlutterStandardVariant(value)
-            }
+            return try FlutterStandardVariant(ocaValue: value)
         }.eraseToAnyAsyncSequence()
     }
 }
