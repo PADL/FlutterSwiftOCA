@@ -202,7 +202,7 @@ public final class OcaChannelManager {
 
     private func onMethod(
         call: FlutterMethodCall<[Data]>
-    ) async throws -> Ocp1Response {
+    ) async throws -> [UInt8] {
         try await throwingFlutterError {
             let target = try MethodTarget(call.method)
 
@@ -212,11 +212,15 @@ public final class OcaChannelManager {
 
             logger.trace("invoking method \(target)")
 
-            return try await object.sendCommandRrq(
+            let response = try await object.sendCommandRrq(
                 methodID: target.methodID,
                 parameterCount: OcaUint8(call.arguments?.count ?? 0),
                 parameterData: Data(call.arguments?.flatMap { $0 } ?? [])
             )
+            guard response.statusCode == .ok else {
+                throw Ocp1Error.status(response.statusCode)
+            }
+            return [UInt8](response.parameters.parameterData)
         }
     }
 
