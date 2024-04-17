@@ -30,34 +30,6 @@ private extension OcaONo {
     }
 }
 
-private extension CaseIterable {
-    static func value(for aRawValue: Int32) -> Any? {
-        guard self is any RawRepresentable.Type else {
-            return nil
-        }
-
-        for aCase in Self.allCases {
-            let rawValue = (aCase as! any RawRepresentable).rawValue
-            guard let rawValue = rawValue as? any FixedWidthInteger else {
-                return nil
-            }
-            guard let rawValue = Int32(exactly: rawValue) else {
-                continue
-            }
-            if rawValue == aRawValue {
-                return aCase
-            }
-        }
-        return nil
-    }
-}
-
-private extension FixedWidthInteger {
-    var int32Value: Int32? {
-        Int32(exactly: self)
-    }
-}
-
 private extension OcaRoot {
     func propertySubject(with propertyID: OcaPropertyID) -> (any OcaPropertySubjectRepresentable)? {
         for (_, keyPath) in allPropertyKeyPaths {
@@ -70,76 +42,6 @@ private extension OcaRoot {
         }
 
         return nil
-    }
-}
-
-private func isNil(_ value: Any) -> Bool {
-    if let value = value as? ExpressibleByNilLiteral {
-        let value = value as Any?
-        if case .none = value {
-            return true
-        }
-    }
-    return false
-}
-
-private extension JSONEncoder {
-    /// use a JSON round-trip to re-encode OCA constructed values as dictionaries which can then be
-    /// sent over the Flutter bridge
-    func roundTripJSON<T: Encodable>(_ value: T) throws -> Any {
-        let jsonEncodedValue = try encode(value)
-        return try JSONDecoder().decode(FlutterStandardVariant.self, from: jsonEncodedValue).value!
-    }
-}
-
-private extension JSONDecoder {
-    func roundTripJSON<T: Encodable, U: Decodable>(_ value: T, type: U.Type) throws -> U {
-        let jsonEncodedValue = try JSONEncoder().encode(value)
-        return try decode(type, from: jsonEncodedValue)
-    }
-}
-
-private extension FlutterStandardVariant {
-    init(ocaValue value: Any) throws {
-        if isNil(value) {
-            self = .nil
-        } else if let value = value as? (any RawRepresentable),
-                  let rawValue = value.rawValue as? (any FixedWidthInteger),
-                  let int32RawValue = rawValue.int32Value
-        {
-            self = .int32(int32RawValue)
-        } else if let value = value as? OcaObjectIdentification {
-            self = .int32(Int32(bitPattern: value.oNo))
-        } else if let value = value as? any Codable, !JSONSerialization.isValidJSONObject(value) {
-            // TODO: perhaps we need to use reencodeAsValidJSONObject() which uses AnyCodable
-            try self.init(JSONEncoder().roundTripJSON(value))
-        } else {
-            try self.init(value)
-        }
-    }
-
-    func ocaValue(_ type: Any.Type) throws -> Any {
-        if let type = type as? any CaseIterable.Type,
-           case let .int32(int32RawValue) = self,
-           let enumValue = type.value(for: int32RawValue)
-        {
-            return enumValue
-        } else if self == .nil {
-            guard type is ExpressibleByNilLiteral else {
-                throw Ocp1Error.status(.parameterError)
-            }
-            let vnil: Any! = nil
-            return vnil as Any
-        } else {
-            do {
-                return try value(type)!
-            } catch FlutterSwiftError.variantNotDecodable {
-                guard let value = value as? Codable, let type = type as? Codable.Type else {
-                    throw FlutterSwiftError.variantNotDecodable
-                }
-                return try JSONDecoder().roundTripJSON(value, type: type)
-            }
-        }
     }
 }
 
@@ -234,7 +136,8 @@ public final class OcaChannelManager {
         try await throwingFlutterError {
             let target = try MethodTarget(call.method)
 
-            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo) else {
+            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
+            else {
                 throw Ocp1Error.objectNotPresent
             }
 
@@ -275,7 +178,8 @@ public final class OcaChannelManager {
         try await throwingFlutterError {
             let target = try PropertyTarget(call.method)
 
-            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo) else {
+            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
+            else {
                 throw Ocp1Error.objectNotPresent
             }
 
@@ -285,7 +189,7 @@ public final class OcaChannelManager {
             }
 
             let value = try await property._getValue(object, flags: [])
-            return try FlutterStandardVariant(ocaValue: value)
+            return try FlutterStandardVariant(value)
         }
     }
 
@@ -296,7 +200,8 @@ public final class OcaChannelManager {
             let target = try PropertyTarget(call.method)
             let value = call.arguments!
 
-            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo) else {
+            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
+            else {
                 throw Ocp1Error.objectNotPresent
             }
 
@@ -309,7 +214,7 @@ public final class OcaChannelManager {
                 .trace(
                     "setting property \(target.propertyID) on object \(object) to \(value)"
                 )
-            try await property._setValue(object, value.ocaValue(property.valueType))
+            try await property._setValue(object, value.value(as: property.valueType))
             return FlutterStandardVariant.nil
         }
     }
@@ -321,7 +226,8 @@ public final class OcaChannelManager {
         try await throwingFlutterError {
             let target = try PropertyTarget(target!)
 
-            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo) else {
+            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
+            else {
                 throw Ocp1Error.objectNotPresent
             }
 
@@ -341,7 +247,8 @@ public final class OcaChannelManager {
         try await throwingFlutterError {
             let target = try PropertyTarget(target!)
 
-            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo) else {
+            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
+            else {
                 throw Ocp1Error.objectNotPresent
             }
 
@@ -367,22 +274,21 @@ extension OcaPropertyRepresentable {
     {
         async.compactMap {
             guard let value = try? $0.get() else { return .nil }
-            return try FlutterStandardVariant(ocaValue: value)
+            return try FlutterStandardVariant(value)
         }.eraseToAnyAsyncSequence()
     }
 }
 
-public extension FlutterError {
+extension FlutterError {
     init(
         error: Ocp1Error,
         message: String? = nil,
-        details: (any Codable)? = nil,
         stacktrace: String? = nil
     ) {
         self.init(
             code: "\(OcaChannelPrefix)" + String(describing: error),
             message: message,
-            details: details
+            stacktrace: stacktrace
         )
     }
 }
