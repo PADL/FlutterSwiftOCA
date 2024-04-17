@@ -96,6 +96,8 @@ private extension FlutterStandardVariant {
             // no support for 32-bit scalar floats in Flutter
             // TODO: remove this, it's handled by FlutterSwift now
             self = .float64(Double(value))
+        } else if let value = value as? OcaObjectIdentification {
+            self = .int32(Int32(bitPattern: value.oNo))
         } else {
             try self.init(value)
         }
@@ -109,6 +111,14 @@ private extension FlutterStandardVariant {
             return enumValue
         } else if type is Float.Type, case let .float64(float64Value) = self {
             return Float(float64Value)
+        } else if type is OcaObjectIdentification.Type, case let .int32(int32Value) = self {
+            return OcaObjectIdentification(
+                oNo: OcaONo(bitPattern: int32Value),
+                classIdentification: OcaClassIdentification(
+                    classID: OcaClassID("1"),
+                    classVersion: 1
+                )
+            )
         } else if self == .nil {
             guard type is ExpressibleByNilLiteral else {
                 throw Ocp1Error.status(.parameterError)
