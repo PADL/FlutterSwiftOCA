@@ -84,9 +84,18 @@ private func isNil(_ value: Any) -> Bool {
 }
 
 private extension JSONEncoder {
-    func reencodeAsValidJSONObject<T: Codable>(_ value: T) throws -> Any {
+    /// use a JSON round-trip to re-encode OCA constructed values as dictionaries which can then be
+    /// sent over the Flutter bridge
+    func roundTripJSON<T: Encodable>(_ value: T) throws -> Any {
         let jsonEncodedValue = try encode(value)
         return try JSONDecoder().decode(FlutterStandardVariant.self, from: jsonEncodedValue).value!
+    }
+}
+
+private extension JSONDecoder {
+    func roundTripJSON<T: Encodable, U: Decodable>(_ value: T, type: U.Type) throws -> U {
+        let jsonEncodedValue = try JSONEncoder().encode(value)
+        return try decode(type, from: jsonEncodedValue)
     }
 }
 
@@ -99,12 +108,11 @@ private extension FlutterStandardVariant {
                   let int32RawValue = rawValue.int32Value
         {
             self = .int32(int32RawValue)
-        } else if let value = value as? Float {
-            // no support for 32-bit scalar floats in Flutter
-            // TODO: remove this, it's handled by FlutterSwift now
-            self = .float64(Double(value))
         } else if let value = value as? OcaObjectIdentification {
             self = .int32(Int32(bitPattern: value.oNo))
+        } else if let value = value as? any Codable, !JSONSerialization.isValidJSONObject(value) {
+            // TODO: perhaps we need to use reencodeAsValidJSONObject() which uses AnyCodable
+            try self.init(JSONEncoder().roundTripJSON(value))
         } else {
             try self.init(value)
         }
@@ -116,26 +124,21 @@ private extension FlutterStandardVariant {
            let enumValue = type.value(for: int32RawValue)
         {
             return enumValue
-        } else if type is Float.Type, case let .float64(float64Value) = self {
-            return Float(float64Value)
-        } else if type is OcaObjectIdentification.Type, case let .int32(int32Value) = self {
-            return OcaObjectIdentification(
-                oNo: OcaONo(bitPattern: int32Value),
-                classIdentification: OcaClassIdentification(
-                    classID: OcaClassID("1"),
-                    classVersion: 1
-                )
-            )
         } else if self == .nil {
             guard type is ExpressibleByNilLiteral else {
                 throw Ocp1Error.status(.parameterError)
             }
             let vnil: Any! = nil
             return vnil as Any
-        } else if let value = value as? any Codable, !JSONSerialization.isValidJSONObject(value) {
-            return try JSONEncoder().reencodeAsValidJSONObject(value)
         } else {
-            return value! // it's not .nil, so it must be not an optional
+            do {
+                return try value(type)!
+            } catch FlutterSwiftError.variantNotDecodable {
+                guard let value = value as? Codable, let type = type as? Codable.Type else {
+                    throw FlutterSwiftError.variantNotDecodable
+                }
+                return try JSONDecoder().roundTripJSON(value, type: type)
+            }
         }
     }
 }
