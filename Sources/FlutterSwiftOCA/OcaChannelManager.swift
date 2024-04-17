@@ -92,6 +92,9 @@ private extension FlutterStandardVariant {
                   let int32RawValue = rawValue.int32Value
         {
             self = .int32(int32RawValue)
+        } else if let value = value as? Float {
+            // no support for 32-bit scalar floats in Flutter
+            self = .float64(Double(value))
         } else {
             try self.init(value)
         }
@@ -103,6 +106,8 @@ private extension FlutterStandardVariant {
            let enumValue = type.value(for: int32RawValue)
         {
             return enumValue
+        } else if type is Float.Type, case let .float64(float64Value) = self {
+            return Float(float64Value)
         } else if self == .nil {
             guard type is ExpressibleByNilLiteral else {
                 throw Ocp1Error.status(.parameterError)
