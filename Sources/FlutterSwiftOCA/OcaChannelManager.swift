@@ -94,6 +94,7 @@ private extension FlutterStandardVariant {
             self = .int32(int32RawValue)
         } else if let value = value as? Float {
             // no support for 32-bit scalar floats in Flutter
+            // TODO: remove this, it's handled by FlutterSwift now
             self = .float64(Double(value))
         } else {
             try self.init(value)
