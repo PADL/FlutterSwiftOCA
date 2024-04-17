@@ -83,6 +83,13 @@ private func isNil(_ value: Any) -> Bool {
     return false
 }
 
+private extension JSONEncoder {
+    func reencodeAsValidJSONObject<T: Codable>(_ value: T) throws -> Any {
+        let jsonEncodedValue = try encode(value)
+        return try JSONDecoder().decode(FlutterStandardVariant.self, from: jsonEncodedValue).value!
+    }
+}
+
 private extension FlutterStandardVariant {
     init(ocaValue value: Any) throws {
         if isNil(value) {
@@ -125,8 +132,10 @@ private extension FlutterStandardVariant {
             }
             let vnil: Any! = nil
             return vnil as Any
+        } else if let value = value as? any Codable, !JSONSerialization.isValidJSONObject(value) {
+            return try JSONEncoder().reencodeAsValidJSONObject(value)
         } else {
-            return self
+            return value! // it's not .nil, so it must be not an optional
         }
     }
 }
