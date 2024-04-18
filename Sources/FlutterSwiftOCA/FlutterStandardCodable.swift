@@ -19,7 +19,7 @@ extension Dictionary: FlutterMapRepresentable where Key: Codable & Hashable, Val
 
 /// protocol to allow third-party classes to opt into being represented as
 /// `AnyFlutterStandardCodable`
-public protocol AnyFlutterStandardCodableRepresentable {
+public protocol FlutterStandardCodable {
     init(any: AnyFlutterStandardCodable) throws
     func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable
 }
@@ -60,7 +60,7 @@ public extension AnyFlutterStandardCodable {
                 )
                 return result
             })
-        } else if let any = any as? AnyFlutterStandardCodableRepresentable {
+        } else if let any = any as? FlutterStandardCodable {
             self = try any.bridgeToAnyFlutterStandardCodable()
         } else if let raw = any as? (any RawRepresentable) {
             self = try raw.bridgeToAnyFlutterStandardCodable()
@@ -73,7 +73,7 @@ public extension AnyFlutterStandardCodable {
 }
 
 /// extensions to allow smaller and unsigned integral types to be represented as variants
-extension Int8: AnyFlutterStandardCodableRepresentable {
+extension Int8: FlutterStandardCodable {
     public init(any: AnyFlutterStandardCodable) throws {
         guard case let .int32(int32) = any else {
             throw FlutterSwiftError.fieldNotDecodable
@@ -89,7 +89,7 @@ extension Int8: AnyFlutterStandardCodableRepresentable {
     }
 }
 
-extension Int16: AnyFlutterStandardCodableRepresentable {
+extension Int16: FlutterStandardCodable {
     public init(any: AnyFlutterStandardCodable) throws {
         guard case let .int32(int32) = any else {
             throw FlutterSwiftError.fieldNotDecodable
@@ -105,7 +105,7 @@ extension Int16: AnyFlutterStandardCodableRepresentable {
     }
 }
 
-extension UInt8: AnyFlutterStandardCodableRepresentable {
+extension UInt8: FlutterStandardCodable {
     public init(any: AnyFlutterStandardCodable) throws {
         guard case let .int32(int32) = any else {
             throw FlutterSwiftError.fieldNotDecodable
@@ -121,7 +121,7 @@ extension UInt8: AnyFlutterStandardCodableRepresentable {
     }
 }
 
-extension UInt16: AnyFlutterStandardCodableRepresentable {
+extension UInt16: FlutterStandardCodable {
     public init(any: AnyFlutterStandardCodable) throws {
         guard case let .int32(int32) = any else {
             throw FlutterSwiftError.fieldNotDecodable
@@ -137,7 +137,7 @@ extension UInt16: AnyFlutterStandardCodableRepresentable {
     }
 }
 
-extension UInt32: AnyFlutterStandardCodableRepresentable {
+extension UInt32: FlutterStandardCodable {
     public init(any: AnyFlutterStandardCodable) throws {
         guard case let .int64(int64) = any else {
             throw FlutterSwiftError.fieldNotDecodable
@@ -153,7 +153,7 @@ extension UInt32: AnyFlutterStandardCodableRepresentable {
     }
 }
 
-extension Float: AnyFlutterStandardCodableRepresentable {
+extension Float: FlutterStandardCodable {
     public init(any: AnyFlutterStandardCodable) throws {
         guard case let .float64(float64) = any else {
             throw FlutterSwiftError.fieldNotDecodable
@@ -166,7 +166,7 @@ extension Float: AnyFlutterStandardCodableRepresentable {
     }
 }
 
-extension Data: AnyFlutterStandardCodableRepresentable {
+extension Data: FlutterStandardCodable {
     public init(any: AnyFlutterStandardCodable) throws {
         guard case let .uint8Data(uint8Data) = any else {
             throw FlutterSwiftError.fieldNotDecodable
@@ -230,7 +230,7 @@ private func isNil(_ value: Any) -> Bool {
 
 public extension AnyFlutterStandardCodable {
     func value(as type: Any.Type? = nil) throws -> Any {
-        if let type = type as? AnyFlutterStandardCodableRepresentable.Type {
+        if let type = type as? FlutterStandardCodable.Type {
             do {
                 return try type.init(any: self)
             } catch {}
