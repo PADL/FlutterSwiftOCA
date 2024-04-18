@@ -5,6 +5,8 @@
 import FlutterSwift
 import Foundation
 
+// TODO: remove these when integrated to FlutterSwift
+
 private protocol FlutterListRepresentable: Collection, Codable where Element: Codable {}
 extension Array: FlutterListRepresentable where Element: Codable {}
 
@@ -61,6 +63,8 @@ public extension FlutterStandardVariant {
             self = try any.bridgeToFlutterStandardVariant()
         } else if let raw = any as? (any RawRepresentable) {
             self = try raw.bridgeToFlutterStandardVariant()
+        } else if let encodable = any as? Encodable {
+            self = try encodable.bridgeToFlutterStandardVariant()
         } else {
             throw FlutterSwiftError.notRepresentableAsVariant
         }
@@ -267,6 +271,8 @@ public extension FlutterStandardVariant {
         case let .list(list):
             if type is any FlutterListRepresentable.Type {
                 return try list.map { try $0.value() }
+            } else if let type = type as? Decodable.Type {
+                return try bridgeFromFlutterStandardVariant(to: type)
             }
         case let .map(map):
             if type is any FlutterMapRepresentable.Type {
@@ -277,6 +283,8 @@ public extension FlutterStandardVariant {
                     }
                     return result
                 }
+            } else if let type = type as? Decodable.Type {
+                return try bridgeFromFlutterStandardVariant(to: type)
             }
         }
 
@@ -294,12 +302,15 @@ private extension CaseIterable {
 }
 
 extension FlutterStandardVariant {
-    func _dynamicCastAsJSON<T: Decodable>(to type: T.Type) throws -> T {
+    func bridgeFromFlutterStandardVariant<T: Decodable>(to type: T.Type) throws -> T {
         let jsonEncodedValue = try JSONEncoder().encode(self)
         return try JSONDecoder().decode(type, from: jsonEncodedValue)
     }
+}
 
-    func _dynamicCastAsCaseIterable<T: Decodable & CaseIterable>(to type: T.Type) throws -> T {
-        try T.bridgeFromFlutterStandardVariant(self)
+extension Encodable {
+    func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant {
+        let jsonEncodedValue = try JSONEncoder().encode(self)
+        return try JSONDecoder().decode(FlutterStandardVariant.self, from: jsonEncodedValue)
     }
 }
