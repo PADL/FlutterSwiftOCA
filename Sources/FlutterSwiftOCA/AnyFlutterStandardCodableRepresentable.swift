@@ -17,14 +17,15 @@ private protocol FlutterMapRepresentable<Key, Value>: Collection, Sendable {
 
 extension Dictionary: FlutterMapRepresentable where Key: Codable & Hashable, Value: Codable {}
 
-/// protocol to allow third-party classes to opt into being represented as `FlutterStandardVariant`
-public protocol FlutterStandardVariantRepresentable {
-    init(variant: FlutterStandardVariant) throws
-    func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant
+/// protocol to allow third-party classes to opt into being represented as
+/// `AnyFlutterStandardCodable`
+public protocol AnyFlutterStandardCodableRepresentable {
+    init(any: AnyFlutterStandardCodable) throws
+    func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable
 }
 
 /// extension for initializing a type from a type-erased value
-public extension FlutterStandardVariant {
+public extension AnyFlutterStandardCodable {
     init(_ any: Any) throws {
         if isNil(any) {
             self = .nil
@@ -49,131 +50,131 @@ public extension FlutterStandardVariant {
         } else if let float64Data = any as? [Double] {
             self = .float64Data(float64Data)
         } else if let list = any as? [Any] {
-            self = .list(try list.map { try FlutterStandardVariant($0) })
+            self = .list(try list.map { try AnyFlutterStandardCodable($0) })
         } else if let map = any as? [AnyHashable: Any] {
             self = .map(try map.reduce([:]) {
                 var result = $0
-                try result[FlutterStandardVariant($1.key)] = FlutterStandardVariant(
+                try result[AnyFlutterStandardCodable($1.key)] = AnyFlutterStandardCodable(
                     $1
                         .value
                 )
                 return result
             })
-        } else if let any = any as? FlutterStandardVariantRepresentable {
-            self = try any.bridgeToFlutterStandardVariant()
+        } else if let any = any as? AnyFlutterStandardCodableRepresentable {
+            self = try any.bridgeToAnyFlutterStandardCodable()
         } else if let raw = any as? (any RawRepresentable) {
-            self = try raw.bridgeToFlutterStandardVariant()
+            self = try raw.bridgeToAnyFlutterStandardCodable()
         } else if let encodable = any as? Encodable {
-            self = try encodable.bridgeToFlutterStandardVariant()
+            self = try encodable.bridgeToAnyFlutterStandardCodable()
         } else {
-            throw FlutterSwiftError.notRepresentableAsVariant
+            throw FlutterSwiftError.notRepresentableAsStandardField
         }
     }
 }
 
 /// extensions to allow smaller and unsigned integral types to be represented as variants
-extension Int8: FlutterStandardVariantRepresentable {
-    public init(variant: FlutterStandardVariant) throws {
-        guard case let .int32(int32) = variant else {
-            throw FlutterSwiftError.variantNotDecodable
+extension Int8: AnyFlutterStandardCodableRepresentable {
+    public init(any: AnyFlutterStandardCodable) throws {
+        guard case let .int32(int32) = any else {
+            throw FlutterSwiftError.fieldNotDecodable
         }
         guard let int8 = Int8(exactly: int32) else {
-            throw FlutterSwiftError.notRepresentableAsVariant
+            throw FlutterSwiftError.notRepresentableAsStandardField
         }
         self = int8
     }
 
-    public func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant {
+    public func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
         .int32(Int32(self))
     }
 }
 
-extension Int16: FlutterStandardVariantRepresentable {
-    public init(variant: FlutterStandardVariant) throws {
-        guard case let .int32(int32) = variant else {
-            throw FlutterSwiftError.variantNotDecodable
+extension Int16: AnyFlutterStandardCodableRepresentable {
+    public init(any: AnyFlutterStandardCodable) throws {
+        guard case let .int32(int32) = any else {
+            throw FlutterSwiftError.fieldNotDecodable
         }
         guard let int16 = Int16(exactly: int32) else {
-            throw FlutterSwiftError.notRepresentableAsVariant
+            throw FlutterSwiftError.notRepresentableAsStandardField
         }
         self = int16
     }
 
-    public func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant {
+    public func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
         .int32(Int32(self))
     }
 }
 
-extension UInt8: FlutterStandardVariantRepresentable {
-    public init(variant: FlutterStandardVariant) throws {
-        guard case let .int32(int32) = variant else {
-            throw FlutterSwiftError.variantNotDecodable
+extension UInt8: AnyFlutterStandardCodableRepresentable {
+    public init(any: AnyFlutterStandardCodable) throws {
+        guard case let .int32(int32) = any else {
+            throw FlutterSwiftError.fieldNotDecodable
         }
         guard let uint8 = UInt8(exactly: int32) else {
-            throw FlutterSwiftError.notRepresentableAsVariant
+            throw FlutterSwiftError.notRepresentableAsStandardField
         }
         self = uint8
     }
 
-    public func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant {
+    public func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
         .int32(Int32(self))
     }
 }
 
-extension UInt16: FlutterStandardVariantRepresentable {
-    public init(variant: FlutterStandardVariant) throws {
-        guard case let .int32(int32) = variant else {
-            throw FlutterSwiftError.variantNotDecodable
+extension UInt16: AnyFlutterStandardCodableRepresentable {
+    public init(any: AnyFlutterStandardCodable) throws {
+        guard case let .int32(int32) = any else {
+            throw FlutterSwiftError.fieldNotDecodable
         }
         guard let uint16 = UInt16(exactly: int32) else {
-            throw FlutterSwiftError.notRepresentableAsVariant
+            throw FlutterSwiftError.notRepresentableAsStandardField
         }
         self = uint16
     }
 
-    public func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant {
+    public func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
         .int32(Int32(self))
     }
 }
 
-extension UInt32: FlutterStandardVariantRepresentable {
-    public init(variant: FlutterStandardVariant) throws {
-        guard case let .int64(int64) = variant else {
-            throw FlutterSwiftError.variantNotDecodable
+extension UInt32: AnyFlutterStandardCodableRepresentable {
+    public init(any: AnyFlutterStandardCodable) throws {
+        guard case let .int64(int64) = any else {
+            throw FlutterSwiftError.fieldNotDecodable
         }
         guard let uint32 = UInt32(exactly: int64) else {
-            throw FlutterSwiftError.notRepresentableAsVariant
+            throw FlutterSwiftError.notRepresentableAsStandardField
         }
         self = uint32
     }
 
-    public func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant {
+    public func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
         .int64(Int64(self))
     }
 }
 
-extension Float: FlutterStandardVariantRepresentable {
-    public init(variant: FlutterStandardVariant) throws {
-        guard case let .float64(float64) = variant else {
-            throw FlutterSwiftError.variantNotDecodable
+extension Float: AnyFlutterStandardCodableRepresentable {
+    public init(any: AnyFlutterStandardCodable) throws {
+        guard case let .float64(float64) = any else {
+            throw FlutterSwiftError.fieldNotDecodable
         }
         self = Float(float64)
     }
 
-    public func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant {
+    public func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
         .float64(Double(self))
     }
 }
 
-extension Data: FlutterStandardVariantRepresentable {
-    public init(variant: FlutterStandardVariant) throws {
-        guard case let .uint8Data(uint8Data) = variant else {
-            throw FlutterSwiftError.variantNotDecodable
+extension Data: AnyFlutterStandardCodableRepresentable {
+    public init(any: AnyFlutterStandardCodable) throws {
+        guard case let .uint8Data(uint8Data) = any else {
+            throw FlutterSwiftError.fieldNotDecodable
         }
         self.init(uint8Data)
     }
 
-    public func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant {
+    public func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
         .uint8Data([UInt8](self))
     }
 }
@@ -185,11 +186,11 @@ private extension FixedWidthInteger {
 }
 
 extension RawRepresentable {
-    func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant {
+    func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
         guard let rawValue = rawValue as? (any FixedWidthInteger),
               let rawValue = rawValue._int32Value
         else {
-            throw FlutterSwiftError.notRepresentableAsVariant
+            throw FlutterSwiftError.notRepresentableAsStandardField
         }
         return .int32(rawValue)
     }
@@ -227,11 +228,11 @@ private func isNil(_ value: Any) -> Bool {
     return false
 }
 
-public extension FlutterStandardVariant {
+public extension AnyFlutterStandardCodable {
     func value(as type: Any.Type? = nil) throws -> Any {
-        if let type = type as? FlutterStandardVariantRepresentable.Type {
+        if let type = type as? AnyFlutterStandardCodableRepresentable.Type {
             do {
-                return try type.init(variant: self)
+                return try type.init(any: self)
             } catch {}
         }
 
@@ -244,11 +245,11 @@ public extension FlutterStandardVariant {
         case .true:
             fallthrough
         case .false:
-            guard type is Bool.Type else { throw FlutterSwiftError.variantNotDecodable }
+            guard type is Bool.Type else { throw FlutterSwiftError.fieldNotDecodable }
             return self == .true
         case let .int32(int32):
             if let type = type as? any CaseIterable.Type {
-                return try type.bridgeFromFlutterStandardVariant(self) as Any
+                return try type.bridgeFromAnyFlutterStandardCodable(self) as Any
             } else if type is Int32.Type {
                 return int32
             }
@@ -272,7 +273,7 @@ public extension FlutterStandardVariant {
             if type is any FlutterListRepresentable.Type {
                 return try list.map { try $0.value() }
             } else if let type = type as? Decodable.Type {
-                return try bridgeFromFlutterStandardVariant(to: type)
+                return try bridgeFromAnyFlutterStandardCodable(to: type)
             }
         case let .map(map):
             if type is any FlutterMapRepresentable.Type {
@@ -284,33 +285,35 @@ public extension FlutterStandardVariant {
                     return result
                 }
             } else if let type = type as? Decodable.Type {
-                return try bridgeFromFlutterStandardVariant(to: type)
+                return try bridgeFromAnyFlutterStandardCodable(to: type)
             }
         }
 
-        throw FlutterSwiftError.variantNotDecodable
+        throw FlutterSwiftError.fieldNotDecodable
     }
 }
 
 private extension CaseIterable {
-    static func bridgeFromFlutterStandardVariant(_ variant: FlutterStandardVariant) throws -> Self {
-        guard case let .int32(int32) = variant else {
-            throw FlutterSwiftError.notRepresentableAsVariant
+    static func bridgeFromAnyFlutterStandardCodable(_ any: AnyFlutterStandardCodable) throws
+        -> Self
+    {
+        guard case let .int32(int32) = any else {
+            throw FlutterSwiftError.notRepresentableAsStandardField
         }
         return Self.value(for: int32) as! Self
     }
 }
 
-extension FlutterStandardVariant {
-    func bridgeFromFlutterStandardVariant<T: Decodable>(to type: T.Type) throws -> T {
+extension AnyFlutterStandardCodable {
+    func bridgeFromAnyFlutterStandardCodable<T: Decodable>(to type: T.Type) throws -> T {
         let jsonEncodedValue = try JSONEncoder().encode(self)
         return try JSONDecoder().decode(type, from: jsonEncodedValue)
     }
 }
 
 extension Encodable {
-    func bridgeToFlutterStandardVariant() throws -> FlutterStandardVariant {
+    func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
         let jsonEncodedValue = try JSONEncoder().encode(self)
-        return try JSONDecoder().decode(FlutterStandardVariant.self, from: jsonEncodedValue)
+        return try JSONDecoder().decode(AnyFlutterStandardCodable.self, from: jsonEncodedValue)
     }
 }

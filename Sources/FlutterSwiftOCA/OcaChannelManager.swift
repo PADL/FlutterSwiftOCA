@@ -174,7 +174,7 @@ public final class OcaChannelManager {
 
     private func onGetProperty(
         call: FlutterMethodCall<FlutterNull>
-    ) async throws -> FlutterStandardVariant {
+    ) async throws -> AnyFlutterStandardCodable {
         try await throwingFlutterError {
             let target = try PropertyTarget(call.method)
 
@@ -189,13 +189,13 @@ public final class OcaChannelManager {
             }
 
             let value = try await property._getValue(object, flags: [])
-            return try FlutterStandardVariant(value)
+            return try AnyFlutterStandardCodable(value)
         }
     }
 
     private func onSetProperty(
-        call: FlutterMethodCall<FlutterStandardVariant>
-    ) async throws -> FlutterStandardVariant {
+        call: FlutterMethodCall<AnyFlutterStandardCodable>
+    ) async throws -> AnyFlutterStandardCodable {
         try await throwingFlutterError {
             let target = try PropertyTarget(call.method)
             let value = call.arguments!
@@ -215,13 +215,13 @@ public final class OcaChannelManager {
                     "setting property \(target.propertyID) on object \(object) to \(value)"
                 )
             try await property._setValue(object, value.value(as: property.valueType))
-            return FlutterStandardVariant.nil
+            return AnyFlutterStandardCodable.nil
         }
     }
 
     @Sendable
     private func onPropertyEventListen(_ target: String?) async throws
-        -> FlutterEventStream<FlutterStandardVariant>
+        -> FlutterEventStream<AnyFlutterStandardCodable>
     {
         try await throwingFlutterError {
             let target = try PropertyTarget(target!)
@@ -252,29 +252,29 @@ public final class OcaChannelManager {
                 throw Ocp1Error.objectNotPresent
             }
 
-            try await object.unsubscribe()
+            // TODO: this will unsubscribe to _all_ events, do we need a ref count?
+            // try await object.unsubscribe()
         }
     }
 
     @Sendable
-    private func onConnectionStateListen(_: FlutterStandardVariant?) async throws
-        -> FlutterEventStream<String>
+    private func onConnectionStateListen(_: AnyFlutterStandardCodable?) async throws
+        -> FlutterEventStream<Int32>
     {
-        // FIXME: surely there's a better way to express this?
-        connection.connectionState.map { String(describing: $0) }.eraseToAnyAsyncSequence()
+        connection.connectionState.map { Int32($0.rawValue) }.eraseToAnyAsyncSequence()
     }
 
     @Sendable
-    private func onConnectionStateCancel(_: FlutterStandardVariant?) async throws {}
+    private func onConnectionStateCancel(_: AnyFlutterStandardCodable?) async throws {}
 }
 
 extension OcaPropertyRepresentable {
     func eraseToFlutterEventStream()
-        -> FlutterEventStream<FlutterStandardVariant>
+        -> FlutterEventStream<AnyFlutterStandardCodable>
     {
         async.compactMap {
             guard let value = try? $0.get() else { return .nil }
-            return try FlutterStandardVariant(value)
+            return try AnyFlutterStandardCodable(value)
         }.eraseToAnyAsyncSequence()
     }
 }
