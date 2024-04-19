@@ -50,6 +50,7 @@ public final class OcaChannelManager {
     private let connection: Ocp1Connection
     private let binaryMessenger: FlutterBinaryMessenger
     private let logger: Logger
+    private let flags: Flags
 
     // method channels
     private let methodChannel: FlutterMethodChannel
@@ -60,14 +61,28 @@ public final class OcaChannelManager {
     private let propertyEventChannel: FlutterEventChannel
     private let connectionStateChannel: FlutterEventChannel
 
+    public struct Flags: OptionSet {
+        public typealias RawValue = UInt
+
+        public let rawValue: RawValue
+
+        public init(rawValue: RawValue) {
+            self.rawValue = rawValue
+        }
+
+        public static let persistSubscriptions = Flags(rawValue: 1 << 0)
+    }
+
     public init(
         connection: Ocp1Connection,
         binaryMessenger: FlutterBinaryMessenger,
-        logger: Logger
+        logger: Logger,
+        flags: Flags = []
     ) async throws {
         self.connection = connection
         self.binaryMessenger = binaryMessenger
         self.logger = logger
+        self.flags = flags
 
         methodChannel = FlutterMethodChannel(
             name: "\(OcaChannelPrefix)method",
@@ -168,6 +183,7 @@ public final class OcaChannelManager {
             }
 
             self.oNo = oNo
+            precondition(v[1].contains("."))
             propertyID = OcaPropertyID(String(v[1]))
         }
     }
@@ -219,6 +235,31 @@ public final class OcaChannelManager {
         }
     }
 
+    private var subscriptionRefs = [OcaONo: Int]()
+
+    private func addSubscriptionRef(_ oNo: OcaONo) -> Int { // returns old ref count
+        let refCount = subscriptionRefs[oNo] ?? 0
+        subscriptionRefs[oNo] = refCount + 1
+        return refCount
+    }
+
+    private func removeSubscriptionRef(_ oNo: OcaONo) throws -> Int { // returns new ref count
+        guard var refCount = subscriptionRefs[oNo] else {
+            throw Ocp1Error.notSubscribedToEvent
+        }
+
+        precondition(refCount > 0)
+        refCount = refCount - 1
+
+        if refCount == 0 {
+            subscriptionRefs.removeValue(forKey: oNo)
+        } else {
+            subscriptionRefs[oNo] = refCount
+        }
+
+        return refCount
+    }
+
     @Sendable
     private func onPropertyEventListen(_ target: String?) async throws
         -> FlutterEventStream<AnyFlutterStandardCodable>
@@ -236,24 +277,28 @@ public final class OcaChannelManager {
                 throw Ocp1Error.status(.processingFailed)
             }
 
-            await property.subscribe(object)
-            logger.trace("subscribed object \(object) property \(target.propertyID)")
-            return property.eraseToFlutterEventStream()
+            if addSubscriptionRef(object.objectNumber) == 0 {
+                await property.subscribe(object)
+                logger.trace("subscribed object \(object) property \(target.propertyID)")
+            }
+
+            return property.eraseToFlutterEventStream(object: object, logger: logger)
         }
     }
 
     @Sendable
     private func onPropertyEventCancel(_ target: String?) async throws {
-        try await throwingFlutterError {
-            let target = try PropertyTarget(target!)
+        let target = try PropertyTarget(target!)
 
-            guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
-            else {
-                throw Ocp1Error.objectNotPresent(target.oNo)
-            }
+        guard let object = connection.resolve(cachedObject: target.oNo) else {
+            throw Ocp1Error.objectNotPresent(target.oNo)
+        }
 
-            // TODO: this will unsubscribe to _all_ events, do we need a ref count?
-            // try await object.unsubscribe()
+        let refCount = try removeSubscriptionRef(target.oNo)
+
+        if !flags.contains(.persistSubscriptions), refCount == 0 {
+            try await object.unsubscribe()
+            logger.trace("unsubscribed object \(object)")
         }
     }
 
@@ -269,12 +314,19 @@ public final class OcaChannelManager {
 }
 
 extension OcaPropertyRepresentable {
-    func eraseToFlutterEventStream()
+    func eraseToFlutterEventStream(object: OcaRoot, logger: Logger)
         -> FlutterEventStream<AnyFlutterStandardCodable>
     {
         async.compactMap {
-            guard let value = try? $0.get() else { return .nil }
-            return try AnyFlutterStandardCodable(value)
+            guard let value = try? $0.get() else {
+                return .nil
+            }
+            let any = try AnyFlutterStandardCodable(value)
+            logger
+                .trace(
+                    "property event object \(object) ID \(self.propertyIDs[0]) value \(String(describing: value)) => \(any)"
+                )
+            return any
         }.eraseToAnyAsyncSequence()
     }
 }
