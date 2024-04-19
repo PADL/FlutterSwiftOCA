@@ -138,7 +138,7 @@ public final class OcaChannelManager {
 
             guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
             else {
-                throw Ocp1Error.objectNotPresent
+                throw Ocp1Error.objectNotPresent(target.oNo)
             }
 
             logger.trace("invoking method \(target)")
@@ -180,7 +180,7 @@ public final class OcaChannelManager {
 
             guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
             else {
-                throw Ocp1Error.objectNotPresent
+                throw Ocp1Error.objectNotPresent(target.oNo)
             }
 
             guard let property = object.propertySubject(with: target.propertyID) else {
@@ -202,7 +202,7 @@ public final class OcaChannelManager {
 
             guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
             else {
-                throw Ocp1Error.objectNotPresent
+                throw Ocp1Error.objectNotPresent(target.oNo)
             }
 
             guard let property = object.propertySubject(with: target.propertyID) else {
@@ -228,7 +228,7 @@ public final class OcaChannelManager {
 
             guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
             else {
-                throw Ocp1Error.objectNotPresent
+                throw Ocp1Error.objectNotPresent(target.oNo)
             }
 
             guard let property = object.propertySubject(with: target.propertyID) else {
@@ -249,7 +249,7 @@ public final class OcaChannelManager {
 
             guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
             else {
-                throw Ocp1Error.objectNotPresent
+                throw Ocp1Error.objectNotPresent(target.oNo)
             }
 
             // TODO: this will unsubscribe to _all_ events, do we need a ref count?

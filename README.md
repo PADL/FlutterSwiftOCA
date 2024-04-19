@@ -36,3 +36,10 @@ Set property channel
 * Arguments are the encoded property value
 * Return value is null
 
+Connection state channel
+------------------------
+
+* Channel is `com.padl.SwiftOCA/connection_state`
+* Listener parameter is ignored
+* Event data is `Ocp1ConnectionState` integer raw value
+
