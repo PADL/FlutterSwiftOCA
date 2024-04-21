@@ -24,7 +24,7 @@
       "location" : "https://github.com/PADL/FlutterSwift",
       "state" : {
         "branch" : "main",
-        "revision" : "b59b9cef92c9ef830bdeddec5100cc6d696d6376"
+        "revision" : "ea968ad10c822e471cf972ef421315e57c30673d"
       }
     },
     {
@@ -69,7 +69,7 @@
       "location" : "https://github.com/PADL/SwiftOCA",
       "state" : {
         "branch" : "main",
-        "revision" : "5ce1af9243667a24f6235e97e16a2ac5cb3e01d2"
+        "revision" : "abdd202a0767c14e492d0857edfe2294189da932"
       }
     },
     {
