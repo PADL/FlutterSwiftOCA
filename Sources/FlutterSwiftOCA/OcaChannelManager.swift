@@ -322,10 +322,12 @@ extension OcaPropertyRepresentable {
         return .nil
       }
       let any = try AnyFlutterStandardCodable(value)
-      logger
-        .trace(
-          "property event object \(object) ID \(self.propertyIDs[0]) value \(String(describing: value)) => \(any)"
-        )
+      if !(object is OcaSensor) {
+        logger
+          .trace(
+            "property event object \(object) ID \(self.propertyIDs[0]) value \(String(describing: value)) => \(any)"
+          )
+      }
       return any
     }.eraseToAnyAsyncSequence()
   }
