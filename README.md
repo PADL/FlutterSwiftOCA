@@ -6,7 +6,7 @@ This package allows the building of AES70/OCA client applications in Flutter, pr
 Method channel
 ---------------
 
-  * Channel is `oca/method`
+* Channel is `oca/method`
 * Method syntax is `<hex-ono>/<dotted-method-id>` (with no leading 0x)
 * Arguments are `List<Uint8List>` where each item is an encoded parameter to be passed to the OCA device
 * Return value is [UInt8]. The response parameter count is not returned.
