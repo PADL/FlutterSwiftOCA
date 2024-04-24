@@ -6,7 +6,7 @@ This package allows the building of AES70/OCA client applications in Flutter, pr
 Method channel
 ---------------
 
-* Channel is `com.padl.SwiftOCA/method`
+  * Channel is `oca/method`
 * Method syntax is `<hex-ono>/<dotted-method-id>` (with no leading 0x)
 * Arguments are `List<Uint8List>` where each item is an encoded parameter to be passed to the OCA device
 * Return value is [UInt8]. The response parameter count is not returned.
@@ -16,14 +16,14 @@ This will mostly be useful for testing, unless you wish to build your own OCP.1 
 Event channel
 -------------
 
-* Channel is `com.padl.SwiftOCA/event`
+* Channel is `oca/event`
 * Listener parameter is `<hex-ono>/<dotted-property-id>`
 * Event data is the encoded property value
 
 Get property channel
 --------------------
 
-* Channel is `com.padl.SwiftOCA/get_property`
+* Channel is `oca/get_property`
 * Listener parameter is `<hex-ono>/<dotted-property-id>`
 * Arguments are null
 * Return value is the encoded property value
@@ -31,7 +31,7 @@ Get property channel
 Set property channel
 --------------------
 
-* Channel is `com.padl.SwiftOCA/set_property`
+* Channel is `oca/set_property`
 * Listener parameter is `<hex-ono>/<dotted-property-id>`
 * Arguments are the encoded property value
 * Return value is null
@@ -39,7 +39,7 @@ Set property channel
 Connection state channel
 ------------------------
 
-* Channel is `com.padl.SwiftOCA/connection_state`
+* Channel is `oca/connection_state`
 * Listener parameter is ignored
 * Event data is `Ocp1ConnectionState` integer raw value
 
