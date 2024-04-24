@@ -3,6 +3,8 @@ FlutterSwiftOCA
 
 This package allows the building of AES70/OCA client applications in Flutter, presenting a bridge between [FlutterSwift](https://github.com/PADL/FlutterSwift) and [SwiftOCA](https://github.com/PADL/SwiftOCA). OCP.1 values are re-encoded using the chosen Flutter codec.
 
+Once Swift Package Manager is [merged](https://github.com/flutter/flutter/pull/146256) into Flutter, this package will become a Flutter plugin with a Dart API and some example widgets for common OCA controls. Until then you will need to add an explicit dependency to your Xcode project and implement the widgets according to the channel protocol below.
+
 Method channel
 ---------------
 
