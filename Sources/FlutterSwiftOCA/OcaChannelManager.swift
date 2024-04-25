@@ -225,13 +225,21 @@ public final class OcaChannelManager {
         logger.error("could not locate property \(target.propertyID) on \(object)")
         throw Ocp1Error.status(.processingFailed)
       }
-
-      logger
-        .trace(
-          "setting property \(target.propertyID) on object \(object) to \(value)"
-        )
-      try await property._setValue(object, value.value(as: property.valueType))
-      return AnyFlutterStandardCodable.nil
+      do {
+        let propertyValue = try value.value(as: property.valueType)
+        logger
+          .trace(
+            "setting property \(target.propertyID) on object \(object) to \(value) => \(propertyValue)"
+          )
+        try await property._setValue(object, propertyValue)
+        return AnyFlutterStandardCodable.nil
+      } catch {
+        logger
+          .trace(
+            "failed to set property \(target.propertyID) on object \(object) to \(value): \(error)"
+          )
+        throw error
+      }
     }
   }
 
@@ -279,7 +287,10 @@ public final class OcaChannelManager {
 
       if addSubscriptionRef(object.objectNumber) == 0 {
         await property.subscribe(object)
-        logger.trace("subscribed object \(object) property \(target.propertyID)")
+        logger
+          .trace(
+            "subscribed object \(object) property \(target.propertyID) current value \(property)"
+          )
       }
 
       return property.eraseToFlutterEventStream(object: object, logger: logger)
@@ -319,14 +330,20 @@ extension OcaPropertyRepresentable {
   {
     async.compactMap {
       guard let value = try? $0.get() else {
-        return .nil
-      }
-      let any = try AnyFlutterStandardCodable(value)
-      if !(object is OcaSensor) {
         logger
           .trace(
-            "property event object \(object) ID \(self.propertyIDs[0]) value \(String(describing: value)) => \(any)"
+            "property event object \(object) ID \(self.propertyIDs[0]) no value"
           )
+        return nil // this will be ignored by compactMap
+      }
+      let any = try? AnyFlutterStandardCodable(value)
+      if let any {
+        if !(object is OcaSensor) {
+          logger
+            .trace(
+              "property event object \(object) ID \(self.propertyIDs[0]) value \(String(describing: value)) => \(any)"
+            )
+        }
       }
       return any
     }.eraseToAnyAsyncSequence()
@@ -344,5 +361,16 @@ extension FlutterError {
       message: message,
       stacktrace: stacktrace
     )
+  }
+}
+
+extension OcaBoundedPropertyValue: FlutterStandardCodable {
+  public init(any: AnyFlutterStandardCodable) throws {
+    // this should never happen
+    throw FlutterSwiftError.notRepresentableAsStandardField
+  }
+
+  public func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
+    try AnyFlutterStandardCodable([value, minValue, maxValue])
   }
 }
