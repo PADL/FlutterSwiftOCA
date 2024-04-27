@@ -128,19 +128,94 @@ public final class OcaChannelManager {
     }
   }
 
-  struct MethodTarget {
-    let oNo: OcaONo
+  // we allow objects of both known and unknown class to be addressed over channels
+  private enum ObjectOrObjectIdentification {
+    /// object number in hex with no leading 0x
+    case oNo(OcaONo)
+    /// class ID, version, oNo, e.g. ` 1.2.3@3:01234567`
+    case objectIdentification(OcaObjectIdentification)
+
+    private static func _parseObjectIDString(_ string: String)
+      -> (Substring, Substring?, Substring?)
+    {
+      let v = string.split(separator: ":", maxSplits: 2)
+      guard v.count > 1 else { return (v[0], nil, nil) } // objectNumber
+      let w = v[0].split(separator: "@", maxSplits: 2)
+      if w.count > 1 {
+        return (v[1], w[0], w[1]) // objectNumber, objectClass, classVersion
+      } else {
+        return (v[1], w[0], nil) // objectNumber, objectClass
+      }
+    }
+
+    init(_ string: String) throws {
+      let parsedString = Self._parseObjectIDString(string)
+
+      guard let oNo = OcaONo(parsedString.0, radix: 16) else {
+        throw Ocp1Error.status(.badONo)
+      }
+
+      if let classIdentificationString = parsedString.1 {
+        var classVersionNumber: OcaClassVersionNumber
+
+        if let classVersionString = parsedString.2 {
+          guard let _classVersionNumber = OcaUint16(classVersionString),
+                _classVersionNumber <= OcaProtocolVersion.aes70_2023.rawValue
+          else {
+            throw Ocp1Error.status(.parameterOutOfRange)
+          }
+          classVersionNumber = _classVersionNumber
+        } else {
+          classVersionNumber = OcaProtocolVersion.aes70_2023.rawValue
+        }
+
+        let classID = try OcaClassIdentification(
+          classID: OcaClassID(unsafeString: String(classIdentificationString)),
+          classVersion: classVersionNumber
+        )
+        self =
+          .objectIdentification(OcaObjectIdentification(oNo: oNo, classIdentification: classID))
+      } else {
+        self = .oNo(oNo)
+      }
+    }
+
+    func resolve(with connection: Ocp1Connection) async throws -> OcaRoot {
+      let object: OcaRoot?
+
+      switch self {
+      case let .oNo(oNo):
+        object = try await connection.resolve(objectOfUnknownClass: oNo)
+      case let .objectIdentification(objectIdentification):
+        object = await connection.resolve(object: objectIdentification)
+      }
+
+      guard let object else {
+        throw Ocp1Error.objectNotPresent(oNo)
+      }
+
+      return object
+    }
+
+    var oNo: OcaONo {
+      switch self {
+      case let .oNo(oNo):
+        return oNo
+      case let .objectIdentification(objectIdentification):
+        return objectIdentification.oNo
+      }
+    }
+  }
+
+  private struct MethodTarget {
+    let objectID: ObjectOrObjectIdentification
     let methodID: OcaMethodID
 
     init(_ string: String) throws {
       let v = string.split(separator: "/", maxSplits: 2)
       guard v.count == 2 else { throw Ocp1Error.requestParameterOutOfRange }
 
-      guard let oNo = OcaONo(v[0], radix: 16) else {
-        throw Ocp1Error.status(.badONo)
-      }
-
-      self.oNo = oNo
+      objectID = try ObjectOrObjectIdentification(String(v[0]))
       methodID = OcaMethodID(String(v[1]))
     }
   }
@@ -150,11 +225,7 @@ public final class OcaChannelManager {
   ) async throws -> [UInt8] {
     try await throwingFlutterError {
       let target = try MethodTarget(call.method)
-
-      guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
-      else {
-        throw Ocp1Error.objectNotPresent(target.oNo)
-      }
+      let object = try await target.objectID.resolve(with: connection)
 
       logger.trace("invoking method \(target)")
 
@@ -170,20 +241,15 @@ public final class OcaChannelManager {
     }
   }
 
-  struct PropertyTarget {
-    let oNo: OcaONo
+  private struct PropertyTarget {
+    let objectID: ObjectOrObjectIdentification
     let propertyID: OcaPropertyID
 
     init(_ string: String) throws {
       let v = string.split(separator: "/", maxSplits: 2)
       guard v.count == 2 else { throw Ocp1Error.requestParameterOutOfRange }
 
-      guard let oNo = OcaONo(v[0], radix: 16) else {
-        throw Ocp1Error.status(.badONo)
-      }
-
-      self.oNo = oNo
-      precondition(v[1].contains("."))
+      objectID = try ObjectOrObjectIdentification(String(v[0]))
       propertyID = OcaPropertyID(String(v[1]))
     }
   }
@@ -193,11 +259,7 @@ public final class OcaChannelManager {
   ) async throws -> AnyFlutterStandardCodable {
     try await throwingFlutterError {
       let target = try PropertyTarget(call.method)
-
-      guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
-      else {
-        throw Ocp1Error.objectNotPresent(target.oNo)
-      }
+      let object = try await target.objectID.resolve(with: connection)
 
       guard let property = object.propertySubject(with: target.propertyID) else {
         logger.error("could not locate property \(target.propertyID) on \(object)")
@@ -215,11 +277,7 @@ public final class OcaChannelManager {
     try await throwingFlutterError {
       let target = try PropertyTarget(call.method)
       let value = call.arguments!
-
-      guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
-      else {
-        throw Ocp1Error.objectNotPresent(target.oNo)
-      }
+      let object = try await target.objectID.resolve(with: connection)
 
       guard let property = object.propertySubject(with: target.propertyID) else {
         logger.error("could not locate property \(target.propertyID) on \(object)")
@@ -274,11 +332,7 @@ public final class OcaChannelManager {
   {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
-
-      guard let object = try await connection.resolve(objectOfUnknownClass: target.oNo)
-      else {
-        throw Ocp1Error.objectNotPresent(target.oNo)
-      }
+      let object = try await target.objectID.resolve(with: connection)
 
       guard let property = object.propertySubject(with: target.propertyID) else {
         logger.error("could not locate property \(target.propertyID) on \(object)")
@@ -301,11 +355,11 @@ public final class OcaChannelManager {
   private func onPropertyEventCancel(_ target: String?) async throws {
     let target = try PropertyTarget(target!)
 
-    guard let object = connection.resolve(cachedObject: target.oNo) else {
-      throw Ocp1Error.objectNotPresent(target.oNo)
+    guard let object = connection.resolve(cachedObject: target.objectID.oNo) else {
+      throw Ocp1Error.objectNotPresent(target.objectID.oNo)
     }
 
-    let refCount = try removeSubscriptionRef(target.oNo)
+    let refCount = try removeSubscriptionRef(target.objectID.oNo)
 
     if !flags.contains(.persistSubscriptions), refCount == 0 {
       try await object.unsubscribe()

@@ -5,11 +5,18 @@ This package allows the building of AES70/OCA client applications in Flutter, pr
 
 Once Swift Package Manager is [merged](https://github.com/flutter/flutter/pull/146256) into Flutter, this package will become a Flutter plugin with a Dart API and some example widgets for common OCA controls. Until then you will need to add an explicit dependency to your Xcode project and implement the widgets according to the channel protocol below.
 
+In the definitions below, `<object-id>` is one of:
+
+* `<dotted-class-id>@<class-version>:<hex-ono>`
+* `<hex-ono>`
+
+For example, `1.1.3@3:80001000`, or `1.1.3:80001000` (will default to class version 3), or `80001000` (will query device over network to determine class, if not already resolved).
+
 Method channel
 ---------------
 
 * Channel is `oca/method`
-* Method syntax is `<hex-ono>/<dotted-method-id>` (with no leading 0x)
+* Method syntax is `<object-id>/<dotted-method-id>` (with no leading 0x)
 * Arguments are `List<Uint8List>` where each item is an encoded parameter to be passed to the OCA device
 * Return value is [UInt8]. The response parameter count is not returned.
 
@@ -19,14 +26,14 @@ Event channel
 -------------
 
 * Channel is `oca/event`
-* Listener parameter is `<hex-ono>/<dotted-property-id>`
+* Listener parameter is `<object-id>/<dotted-property-id>`
 * Event data is the encoded property value
 
 Get property channel
 --------------------
 
 * Channel is `oca/get_property`
-* Listener parameter is `<hex-ono>/<dotted-property-id>`
+* Listener parameter is `<object-id>/<dotted-property-id>`
 * Arguments are null
 * Return value is the encoded property value
 
@@ -34,7 +41,7 @@ Set property channel
 --------------------
 
 * Channel is `oca/set_property`
-* Listener parameter is `<hex-ono>/<dotted-property-id>`
+* Listener parameter is `<object-id>/<dotted-property-id>`
 * Arguments are the encoded property value
 * Return value is null
 
