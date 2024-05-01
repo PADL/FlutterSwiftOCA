@@ -183,6 +183,8 @@ public final class OcaChannelManager {
     func resolve(with connection: Ocp1Connection) async throws -> OcaRoot {
       let object: OcaRoot?
 
+      if await !connection.isConnected { try await connection.connect() }
+
       switch self {
       case let .oNo(oNo):
         object = try await connection.resolve(objectOfUnknownClass: oNo)
