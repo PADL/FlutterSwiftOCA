@@ -303,12 +303,14 @@ public final class OcaChannelManager {
 
   private var subscriptionRefs = [OcaONo: Int]()
 
+  @discardableResult
   private func addSubscriptionRef(_ oNo: OcaONo) -> Int { // returns old ref count
     let refCount = subscriptionRefs[oNo] ?? 0
     subscriptionRefs[oNo] = refCount + 1
     return refCount
   }
 
+  @discardableResult
   private func removeSubscriptionRef(_ oNo: OcaONo) throws -> Int { // returns new ref count
     guard var refCount = subscriptionRefs[oNo] else {
       throw Ocp1Error.notSubscribedToEvent
@@ -339,13 +341,12 @@ public final class OcaChannelManager {
         throw Ocp1Error.status(.processingFailed)
       }
 
-      if addSubscriptionRef(object.objectNumber) == 0 {
-        await property.subscribe(object)
-        logger
-          .trace(
-            "subscribed object \(object) property \(target.propertyID) current value \(property)"
-          )
-      }
+      addSubscriptionRef(object.objectNumber)
+      await property.subscribe(object)
+
+      logger.trace(
+        "subscribed object \(object) property \(target.propertyID) current value \(property)"
+      )
 
       return property.eraseToFlutterEventStream(object: object, logger: logger)
     }
