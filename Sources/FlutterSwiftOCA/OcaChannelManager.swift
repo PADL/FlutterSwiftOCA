@@ -181,7 +181,7 @@ public final class OcaChannelManager {
     }
 
     func resolve(with connection: Ocp1Connection) async throws -> OcaRoot {
-      let object: OcaRoot?
+      let object: OcaRoot
 
       if await !connection.isConnected { try await connection.connect() }
 
@@ -189,11 +189,7 @@ public final class OcaChannelManager {
       case let .oNo(oNo):
         object = try await connection.resolve(objectOfUnknownClass: oNo)
       case let .objectIdentification(objectIdentification):
-        object = await connection.resolve(object: objectIdentification)
-      }
-
-      guard let object else {
-        throw Ocp1Error.objectNotPresent(oNo)
+        object = try await connection.resolve(object: objectIdentification)
       }
 
       return object
