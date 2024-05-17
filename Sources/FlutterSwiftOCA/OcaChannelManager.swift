@@ -151,7 +151,7 @@ public final class OcaChannelManager {
     init(_ string: String) throws {
       let parsedString = Self._parseObjectIDString(string)
 
-      guard let oNo = OcaONo(parsedString.0, radix: 16) else {
+      guard let oNo = OcaONo(parsedString.0, radix: 16), oNo != OcaInvalidONo else {
         throw Ocp1Error.status(.badONo)
       }
 
