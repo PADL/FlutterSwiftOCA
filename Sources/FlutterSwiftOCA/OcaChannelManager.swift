@@ -300,30 +300,35 @@ public final class OcaChannelManager {
   }
 
   private var subscriptionRefs = [OcaONo: Int]()
+  private var subscriptionRefsLock = NSLock()
 
   @discardableResult
   private func addSubscriptionRef(_ oNo: OcaONo) -> Int { // returns old ref count
-    let refCount = subscriptionRefs[oNo] ?? 0
-    subscriptionRefs[oNo] = refCount + 1
-    return refCount
+    subscriptionRefsLock.withLock {
+      let refCount = subscriptionRefs[oNo] ?? 0
+      subscriptionRefs[oNo] = refCount + 1
+      return refCount
+    }
   }
 
   @discardableResult
   private func removeSubscriptionRef(_ oNo: OcaONo) throws -> Int { // returns new ref count
-    guard var refCount = subscriptionRefs[oNo] else {
-      throw Ocp1Error.notSubscribedToEvent
+    try subscriptionRefsLock.withLock {
+      guard var refCount = subscriptionRefs[oNo] else {
+        throw Ocp1Error.notSubscribedToEvent
+      }
+
+      precondition(refCount > 0)
+      refCount = refCount - 1
+
+      if refCount == 0 {
+        subscriptionRefs.removeValue(forKey: oNo)
+      } else {
+        subscriptionRefs[oNo] = refCount
+      }
+
+      return refCount
     }
-
-    precondition(refCount > 0)
-    refCount = refCount - 1
-
-    if refCount == 0 {
-      subscriptionRefs.removeValue(forKey: oNo)
-    } else {
-      subscriptionRefs[oNo] = refCount
-    }
-
-    return refCount
   }
 
   @Sendable
