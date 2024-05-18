@@ -377,12 +377,12 @@ public final class OcaChannelManager {
   private func onConnectionStateCancel(_: AnyFlutterStandardCodable?) async throws {}
 }
 
-extension OcaPropertyRepresentable {
+extension OcaPropertySubjectRepresentable {
   func eraseToFlutterEventStream(object: OcaRoot, logger: Logger)
     -> FlutterEventStream<AnyFlutterStandardCodable>
   {
-    async.compactMap {
-      guard let value = try? $0.get() else {
+    subject.compactMap { value in
+      guard case let .success(value) = value else {
         logger
           .trace(
             "property event object \(object) ID \(self.propertyIDs[0]) no value"
@@ -390,13 +390,11 @@ extension OcaPropertyRepresentable {
         return nil // this will be ignored by compactMap
       }
       let any = try? AnyFlutterStandardCodable(value)
-      if let any {
-        if !(object is OcaSensor) {
-          logger
-            .trace(
-              "property event object \(object) ID \(self.propertyIDs[0]) value \(String(describing: value)) => \(any)"
-            )
-        }
+      if let any, !(object is OcaSensor) {
+        logger
+          .trace(
+            "property event object \(object) ID \(self.propertyIDs[0]) value \(String(describing: value)) => \(any)"
+          )
       }
       return any
     }.eraseToAnyAsyncSequence()
