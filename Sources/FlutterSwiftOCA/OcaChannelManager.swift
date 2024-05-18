@@ -16,6 +16,7 @@
 
 import AsyncAlgorithms
 import AsyncExtensions
+@_spi(FlutterSwiftPrivate)
 import FlutterSwift
 import Foundation
 import Logging
@@ -45,8 +46,8 @@ private extension OcaRoot {
   }
 }
 
-@OcaConnection
-public final class OcaChannelManager {
+public final class OcaChannelManager: @unchecked
+Sendable {
   private let connection: Ocp1Connection
   private let binaryMessenger: FlutterBinaryMessenger
   private let logger: Logger
@@ -61,7 +62,10 @@ public final class OcaChannelManager {
   private let propertyEventChannel: FlutterEventChannel
   private let connectionStateChannel: FlutterEventChannel
 
-  public struct Flags: OptionSet {
+  private var subscriptionRefs = [OcaONo: Int]()
+  private var subscriptionRefsLock = NSLock()
+
+  public struct Flags: OptionSet, Sendable {
     public typealias RawValue = UInt
 
     public let rawValue: RawValue
@@ -299,9 +303,6 @@ public final class OcaChannelManager {
     }
   }
 
-  private var subscriptionRefs = [OcaONo: Int]()
-  private var subscriptionRefsLock = NSLock()
-
   @discardableResult
   private func addSubscriptionRef(_ oNo: OcaONo) -> Int { // returns old ref count
     subscriptionRefsLock.withLock {
@@ -360,7 +361,7 @@ public final class OcaChannelManager {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
 
-      guard let object = connection.resolve(cachedObject: target.objectID.oNo) else {
+      guard let object = await connection.resolve(cachedObject: target.objectID.oNo) else {
         throw Ocp1Error.objectNotPresent(target.objectID.oNo)
       }
 
@@ -377,7 +378,7 @@ public final class OcaChannelManager {
   private func onConnectionStateListen(_: AnyFlutterStandardCodable?) async throws
     -> FlutterEventStream<Int32>
   {
-    connection.connectionState.map { Int32($0.rawValue) }.eraseToAnyAsyncSequence()
+    await connection.connectionState.map { Int32($0.rawValue) }.eraseToAnyAsyncSequence()
   }
 
   @Sendable
