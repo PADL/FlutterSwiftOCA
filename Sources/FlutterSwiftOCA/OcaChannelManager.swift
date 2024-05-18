@@ -129,7 +129,7 @@ public final class OcaChannelManager {
   }
 
   // we allow objects of both known and unknown class to be addressed over channels
-  private enum ObjectOrObjectIdentification {
+  private enum ObjectIdentification {
     /// object number in hex with no leading 0x
     case oNo(OcaONo)
     /// class ID, version, oNo, e.g. ` 1.2.3@3:01234567`
@@ -206,14 +206,14 @@ public final class OcaChannelManager {
   }
 
   private struct MethodTarget {
-    let objectID: ObjectOrObjectIdentification
+    let objectID: ObjectIdentification
     let methodID: OcaMethodID
 
     init(_ string: String) throws {
       let v = string.split(separator: "/", maxSplits: 2)
       guard v.count == 2 else { throw Ocp1Error.requestParameterOutOfRange }
 
-      objectID = try ObjectOrObjectIdentification(String(v[0]))
+      objectID = try ObjectIdentification(String(v[0]))
       methodID = OcaMethodID(String(v[1]))
     }
   }
@@ -240,14 +240,14 @@ public final class OcaChannelManager {
   }
 
   private struct PropertyTarget {
-    let objectID: ObjectOrObjectIdentification
+    let objectID: ObjectIdentification
     let propertyID: OcaPropertyID
 
     init(_ string: String) throws {
       let v = string.split(separator: "/", maxSplits: 2)
       guard v.count == 2 else { throw Ocp1Error.requestParameterOutOfRange }
 
-      objectID = try ObjectOrObjectIdentification(String(v[0]))
+      objectID = try ObjectIdentification(String(v[0]))
       propertyID = OcaPropertyID(String(v[1]))
     }
   }
