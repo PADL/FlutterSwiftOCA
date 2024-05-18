@@ -26,7 +26,7 @@ public let OcaChannelPrefix = "oca/"
 
 private extension OcaONo {
   var hexString: String {
-    String(format: "%08x", self)
+    String(self, radix: 16)
   }
 }
 
