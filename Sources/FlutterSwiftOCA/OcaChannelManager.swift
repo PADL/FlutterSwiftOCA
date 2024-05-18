@@ -352,17 +352,19 @@ public final class OcaChannelManager {
 
   @Sendable
   private func onPropertyEventCancel(_ target: String?) async throws {
-    let target = try PropertyTarget(target!)
+    try await throwingFlutterError {
+      let target = try PropertyTarget(target!)
 
-    guard let object = connection.resolve(cachedObject: target.objectID.oNo) else {
-      throw Ocp1Error.objectNotPresent(target.objectID.oNo)
-    }
+      guard let object = connection.resolve(cachedObject: target.objectID.oNo) else {
+        throw Ocp1Error.objectNotPresent(target.objectID.oNo)
+      }
 
-    let refCount = try removeSubscriptionRef(target.objectID.oNo)
+      let refCount = try removeSubscriptionRef(target.objectID.oNo)
 
-    if !flags.contains(.persistSubscriptions), refCount == 0 {
-      try await object.unsubscribe()
-      logger.trace("unsubscribed object \(object)")
+      if !flags.contains(.persistSubscriptions), refCount == 0 {
+        try await object.unsubscribe()
+        logger.trace("unsubscribed object \(object)")
+      }
     }
   }
 
