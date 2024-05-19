@@ -62,8 +62,11 @@ Sendable {
   private let propertyEventChannel: FlutterEventChannel
   private let connectionStateChannel: FlutterEventChannel
 
-  private var subscriptionRefs = [OcaONo: Int]()
-  private var subscriptionRefsLock = NSLock()
+  private struct State {
+    var subscriptionRefs = [OcaONo: Int]()
+  }
+
+  private let state: ManagedCriticalState<State>
 
   public struct Flags: OptionSet, Sendable {
     public typealias RawValue = UInt
@@ -87,6 +90,7 @@ Sendable {
     self.binaryMessenger = binaryMessenger
     self.logger = logger
     self.flags = flags
+    state = ManagedCriticalState(State())
 
     methodChannel = FlutterMethodChannel(
       name: "\(OcaChannelPrefix)method",
@@ -305,17 +309,17 @@ Sendable {
 
   @discardableResult
   private func addSubscriptionRef(_ oNo: OcaONo) -> Int { // returns old ref count
-    subscriptionRefsLock.withLock {
-      let refCount = subscriptionRefs[oNo] ?? 0
-      subscriptionRefs[oNo] = refCount + 1
+    state.withCriticalRegion { state in
+      let refCount = state.subscriptionRefs[oNo] ?? 0
+      state.subscriptionRefs[oNo] = refCount + 1
       return refCount
     }
   }
 
   @discardableResult
   private func removeSubscriptionRef(_ oNo: OcaONo) throws -> Int { // returns new ref count
-    try subscriptionRefsLock.withLock {
-      guard var refCount = subscriptionRefs[oNo] else {
+    try state.withCriticalRegion { state in
+      guard var refCount = state.subscriptionRefs[oNo] else {
         throw Ocp1Error.notSubscribedToEvent
       }
 
@@ -323,9 +327,9 @@ Sendable {
       refCount = refCount - 1
 
       if refCount == 0 {
-        subscriptionRefs.removeValue(forKey: oNo)
+        state.subscriptionRefs.removeValue(forKey: oNo)
       } else {
-        subscriptionRefs[oNo] = refCount
+        state.subscriptionRefs[oNo] = refCount
       }
 
       return refCount
