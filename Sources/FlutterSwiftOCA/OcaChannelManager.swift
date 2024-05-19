@@ -124,6 +124,8 @@ Sendable {
       onListen: onConnectionStateListen,
       onCancel: onConnectionStateCancel
     )
+
+    try await connection.connect()
   }
 
   private func throwingFlutterError<T>(_ block: () async throws -> T) async throws -> T {
@@ -190,8 +192,6 @@ Sendable {
 
     func resolve(with connection: Ocp1Connection) async throws -> OcaRoot {
       let object: OcaRoot
-
-      if await !connection.isConnected { try await connection.connect() }
 
       switch self {
       case let .oNo(oNo):
