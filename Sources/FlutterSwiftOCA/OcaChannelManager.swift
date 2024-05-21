@@ -434,6 +434,7 @@ extension OcaBoundedPropertyValue: FlutterStandardCodable {
   }
 
   public func bridgeToAnyFlutterStandardCodable() throws -> AnyFlutterStandardCodable {
-    try AnyFlutterStandardCodable([value, minValue, maxValue])
+//     try AnyFlutterStandardCodable([value, minValue, maxValue])
+    try AnyFlutterStandardCodable(value)
   }
 }
