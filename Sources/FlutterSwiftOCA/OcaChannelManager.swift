@@ -16,7 +16,6 @@
 
 import AsyncAlgorithms
 import AsyncExtensions
-@_spi(FlutterSwiftPrivate)
 import FlutterSwift
 import Foundation
 import Logging
@@ -46,8 +45,8 @@ private extension OcaRoot {
   }
 }
 
-public final class OcaChannelManager: @unchecked
-Sendable {
+@OcaConnection
+public final class OcaChannelManager {
   private let connection: Ocp1Connection
   private let binaryMessenger: FlutterBinaryMessenger
   private let logger: Logger
@@ -61,12 +60,7 @@ Sendable {
   // event channels
   private let propertyEventChannel: FlutterEventChannel
   private let connectionStateChannel: FlutterEventChannel
-
-  private struct State {
-    var subscriptionRefs = [OcaONo: Int]()
-  }
-
-  private let state: ManagedCriticalState<State>
+  private var subscriptionRefs = [OcaONo: Int]()
 
   public struct Flags: OptionSet, Sendable {
     public typealias RawValue = UInt
@@ -90,7 +84,6 @@ Sendable {
     self.binaryMessenger = binaryMessenger
     self.logger = logger
     self.flags = flags
-    state = ManagedCriticalState(State())
 
     methodChannel = FlutterMethodChannel(
       name: "\(OcaChannelPrefix)method",
@@ -309,31 +302,27 @@ Sendable {
 
   @discardableResult
   private func addSubscriptionRef(_ oNo: OcaONo) -> Int { // returns old ref count
-    state.withCriticalRegion { state in
-      let refCount = state.subscriptionRefs[oNo] ?? 0
-      state.subscriptionRefs[oNo] = refCount + 1
-      return refCount
-    }
+    let refCount = subscriptionRefs[oNo] ?? 0
+    subscriptionRefs[oNo] = refCount + 1
+    return refCount
   }
 
   @discardableResult
   private func removeSubscriptionRef(_ oNo: OcaONo) throws -> Int { // returns new ref count
-    try state.withCriticalRegion { state in
-      guard var refCount = state.subscriptionRefs[oNo] else {
-        throw Ocp1Error.notSubscribedToEvent
-      }
-
-      precondition(refCount > 0)
-      refCount = refCount - 1
-
-      if refCount == 0 {
-        state.subscriptionRefs.removeValue(forKey: oNo)
-      } else {
-        state.subscriptionRefs[oNo] = refCount
-      }
-
-      return refCount
+    guard var refCount = subscriptionRefs[oNo] else {
+      throw Ocp1Error.notSubscribedToEvent
     }
+
+    precondition(refCount > 0)
+    refCount = refCount - 1
+
+    if refCount == 0 {
+      subscriptionRefs.removeValue(forKey: oNo)
+    } else {
+      subscriptionRefs[oNo] = refCount
+    }
+
+    return refCount
   }
 
   @Sendable
@@ -365,7 +354,7 @@ Sendable {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
 
-      guard let object = await connection.resolve(cachedObject: target.objectID.oNo) else {
+      guard let object = connection.resolve(cachedObject: target.objectID.oNo) else {
         throw Ocp1Error.objectNotPresent(target.objectID.oNo)
       }
 
@@ -382,7 +371,7 @@ Sendable {
   private func onConnectionStateListen(_: AnyFlutterStandardCodable?) async throws
     -> FlutterEventStream<Int32>
   {
-    await connection.connectionState.map { Int32($0.rawValue) }.eraseToAnyAsyncSequence()
+    connection.connectionState.map { Int32($0.rawValue) }.eraseToAnyAsyncSequence()
   }
 
   @Sendable
