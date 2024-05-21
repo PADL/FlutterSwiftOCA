@@ -114,7 +114,7 @@ Sendable {
     )
 
     try await methodChannel.setMethodCallHandler(onMethod)
-    try await setPropertyChannel.setMethodCallHandler(onGetProperty)
+    try await getPropertyChannel.setMethodCallHandler(onGetProperty)
     try await setPropertyChannel.setMethodCallHandler(onSetProperty)
     try await propertyEventChannel.setStreamHandler(
       onListen: onPropertyEventListen,
