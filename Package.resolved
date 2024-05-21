@@ -24,22 +24,22 @@
       "location" : "https://github.com/PADL/FlutterSwift",
       "state" : {
         "branch" : "main",
-        "revision" : "40e679bec6a1cba62ffdf894cfa47488826932ad"
+        "revision" : "269bf3c58d8230279bb2a7a73191e52044b43bef"
       }
     },
     {
-      "identity" : "ioringswift",
+      "identity" : "flyingfox",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/PADL/IORingSwift",
+      "location" : "https://github.com/swhitty/FlyingFox",
       "state" : {
-        "branch" : "main",
-        "revision" : "915a2ea0c6436d48ddebf054bb9eded714585674"
+        "revision" : "c9e0d358e6fcab4b4a4589bc88d110875c96d739",
+        "version" : "0.14.0"
       }
     },
     {
       "identity" : "socketaddress",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/padl/SocketAddress",
+      "location" : "https://github.com/PADL/SocketAddress",
       "state" : {
         "revision" : "c771792fdc45fecd0f84388ca4182205de54612c",
         "version" : "0.0.1"
@@ -52,15 +52,6 @@
       "state" : {
         "revision" : "da4e36f86544cdf733a40d59b3a2267e3a7bbf36",
         "version" : "1.0.0"
-      }
-    },
-    {
-      "identity" : "swift-async-queue",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/dfed/swift-async-queue",
-      "state" : {
-        "revision" : "90c0ac3661a4fae9f7b94f45316046805f5b2478",
-        "version" : "0.5.2"
       }
     },
     {
@@ -96,7 +87,16 @@
       "location" : "https://github.com/PADL/SwiftOCA",
       "state" : {
         "branch" : "main",
-        "revision" : "d2c1adb3d6b7e6012fd86ebf0c84e8f27c497b84"
+        "revision" : "689d70cceb263e8e88b791823b1d3f870192b8ad"
+      }
+    },
+    {
+      "identity" : "swiftui-sliders",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/spacenation/swiftui-sliders.git",
+      "state" : {
+        "revision" : "d5a7d856655d5c91f891c2b69d982c30fd5c7bdf",
+        "version" : "2.1.0"
       }
     }
   ],

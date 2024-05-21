@@ -116,10 +116,14 @@ Sendable {
     try await methodChannel.setMethodCallHandler(onMethod)
     try await getPropertyChannel.setMethodCallHandler(onGetProperty)
     try await setPropertyChannel.setMethodCallHandler(onSetProperty)
+
+    try await propertyEventChannel.allowChannelBufferOverflow(true)
     try await propertyEventChannel.setStreamHandler(
       onListen: onPropertyEventListen,
       onCancel: onPropertyEventCancel
     )
+
+    try await connectionStateChannel.allowChannelBufferOverflow(true)
     try await connectionStateChannel.setStreamHandler(
       onListen: onConnectionStateListen,
       onCancel: onConnectionStateCancel
