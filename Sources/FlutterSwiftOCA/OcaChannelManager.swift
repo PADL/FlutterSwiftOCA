@@ -368,14 +368,13 @@ Sendable {
   private func onPropertyEventCancel(_ target: String?) async throws {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
-
-      guard let object = await connection.resolve(cachedObject: target.objectID.oNo) else {
-        throw Ocp1Error.objectNotPresent(target.objectID.oNo)
-      }
-
       let refCount = try removeSubscriptionRef(target.objectID.oNo)
 
       if !flags.contains(.persistSubscriptions), refCount == 0 {
+        guard let object = await connection.resolve(cachedObject: target.objectID.oNo) else {
+          throw Ocp1Error.objectNotPresent(target.objectID.oNo)
+        }
+
         try await object.unsubscribe()
         logger.trace("unsubscribed object \(object)")
       }
