@@ -37,12 +37,16 @@ let package = Package(
         "SwiftOCA",
         "FlutterSwift",
       ],
-      swiftSettings: [.interoperabilityMode(.Cxx)]
+      swiftSettings: [
+        .interoperabilityMode(.Cxx, .when(platforms: [.macOS, .iOS, .linux])),
+      ]
     ),
     .testTarget(
       name: "FlutterSwiftOCATests",
       dependencies: ["FlutterSwiftOCA"],
-      swiftSettings: [.interoperabilityMode(.Cxx)]
+      swiftSettings: [
+        .interoperabilityMode(.Cxx, .when(platforms: [.macOS, .iOS, .linux])),
+      ]
     ),
   ]
 )
