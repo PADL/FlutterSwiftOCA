@@ -15,7 +15,7 @@
       "location" : "https://github.com/lhoward/AsyncExtensions",
       "state" : {
         "branch" : "linux",
-        "revision" : "0d96d3550ef94f83c2f300021f9985e4fb44f7af"
+        "revision" : "7a096ed7d549bcf953500a1899aec8b8f6492d4e"
       }
     },
     {
@@ -24,7 +24,7 @@
       "location" : "https://github.com/PADL/FlutterSwift",
       "state" : {
         "branch" : "main",
-        "revision" : "269bf3c58d8230279bb2a7a73191e52044b43bef"
+        "revision" : "13faaa058b04aaa8e6547923a38c870243717bbe"
       }
     },
     {
@@ -32,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swhitty/FlyingFox",
       "state" : {
-        "revision" : "c9e0d358e6fcab4b4a4589bc88d110875c96d739",
-        "version" : "0.14.0"
+        "branch" : "main",
+        "revision" : "3de9f8ada6d7ce40341da23a325a5656debbb180"
       }
     },
     {
@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/PADL/SocketAddress",
       "state" : {
-        "revision" : "c771792fdc45fecd0f84388ca4182205de54612c",
-        "version" : "0.0.1"
+        "revision" : "195f4b64eb7d69894026e24131551068ee10143e",
+        "version" : "0.0.3"
       }
     },
     {
@@ -50,8 +50,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-async-algorithms",
       "state" : {
-        "revision" : "da4e36f86544cdf733a40d59b3a2267e3a7bbf36",
-        "version" : "1.0.0"
+        "revision" : "5c8bd186f48c16af0775972700626f0b74588278",
+        "version" : "1.0.2"
+      }
+    },
+    {
+      "identity" : "swift-atomics",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-atomics",
+      "state" : {
+        "revision" : "cd142fd2f64be2100422d658e7411e39489da985",
+        "version" : "1.2.0"
       }
     },
     {
@@ -59,8 +68,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections.git",
       "state" : {
-        "revision" : "94cf62b3ba8d4bed62680a282d4c25f9c63c2efb",
-        "version" : "1.1.0"
+        "revision" : "671108c96644956dddcd89dd59c203dcdb36cec7",
+        "version" : "1.1.4"
       }
     },
     {
@@ -68,8 +77,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log",
       "state" : {
-        "revision" : "e97a6fcb1ab07462881ac165fdbb37f067e205d5",
-        "version" : "1.5.4"
+        "branch" : "main",
+        "revision" : "1efe6f812904b34ed76ba28fd1f3e9f3bc94f8ec"
       }
     },
     {
@@ -77,8 +86,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-system",
       "state" : {
-        "revision" : "f9266c85189c2751589a50ea5aec72799797e471",
-        "version" : "1.3.0"
+        "revision" : "c8a44d836fe7913603e246acab7c528c2e780168",
+        "version" : "1.4.0"
       }
     },
     {
@@ -87,7 +96,7 @@
       "location" : "https://github.com/PADL/SwiftOCA",
       "state" : {
         "branch" : "main",
-        "revision" : "689d70cceb263e8e88b791823b1d3f870192b8ad"
+        "revision" : "5471a54421d5bf61da9ddca8635585dc817d6976"
       }
     },
     {

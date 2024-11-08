@@ -18,7 +18,7 @@ let package = Package(
   dependencies: [
     // Dependencies declare other packages that this package depends on.
     .package(url: "https://github.com/apple/swift-async-algorithms", from: "1.0.0"),
-    .package(url: "https://github.com/apple/swift-log", from: "1.5.4"),
+    .package(url: "https://github.com/apple/swift-log", branch: "main"),
     .package(url: "https://github.com/lhoward/AsyncExtensions", branch: "linux"),
     .package(url: "https://github.com/PADL/SwiftOCA", branch: "main"),
     .package(url: "https://github.com/PADL/FlutterSwift", branch: "main"),
@@ -37,12 +37,16 @@ let package = Package(
         "SwiftOCA",
         "FlutterSwift",
       ],
-      swiftSettings: [.interoperabilityMode(.Cxx)]
+      swiftSettings: [
+        .interoperabilityMode(.Cxx, .when(platforms: [.macOS, .iOS, .linux])),
+      ]
     ),
     .testTarget(
       name: "FlutterSwiftOCATests",
       dependencies: ["FlutterSwiftOCA"],
-      swiftSettings: [.interoperabilityMode(.Cxx)]
+      swiftSettings: [
+        .interoperabilityMode(.Cxx, .when(platforms: [.macOS, .iOS, .linux])),
+      ]
     ),
   ]
 )
