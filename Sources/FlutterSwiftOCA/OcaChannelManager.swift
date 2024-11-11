@@ -368,7 +368,7 @@ Sendable {
   private func onPropertyEventCancel(_ target: String?) async throws {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
-      let refCount = try removeSubscriptionRef(target.objectID.oNo)
+      guard let refCount = try? removeSubscriptionRef(target.objectID.oNo) else { return }
 
       if !flags.contains(.persistSubscriptions), refCount == 0 {
         guard let object = await connection.resolve(cachedObject: target.objectID.oNo) else {
