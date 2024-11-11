@@ -400,7 +400,7 @@ extension OcaPropertySubjectRepresentable {
       guard case let .success(value) = value else {
         logger
           .trace(
-            "property event object \(object) ID \(self.propertyIDs[0]) no value"
+            "received property event object \(object) ID \(self.propertyIDs[0]) no value"
           )
         return nil // this will be ignored by compactMap
       }
@@ -408,7 +408,7 @@ extension OcaPropertySubjectRepresentable {
       if let any, !(object is OcaSensor) {
         logger
           .trace(
-            "property event object \(object) ID \(self.propertyIDs[0]) value \(String(describing: value)) => \(any)"
+            "received property event object \(object) ID \(self.propertyIDs[0]) value \(String(describing: value)) => \(any)"
           )
       }
       return any
