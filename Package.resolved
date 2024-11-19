@@ -15,7 +15,7 @@
       "location" : "https://github.com/lhoward/AsyncExtensions",
       "state" : {
         "branch" : "linux",
-        "revision" : "7a096ed7d549bcf953500a1899aec8b8f6492d4e"
+        "revision" : "fdad5fd5e7857501c2f4da51b8e2e0e37239df5d"
       }
     },
     {
@@ -24,7 +24,7 @@
       "location" : "https://github.com/PADL/FlutterSwift",
       "state" : {
         "branch" : "main",
-        "revision" : "13faaa058b04aaa8e6547923a38c870243717bbe"
+        "revision" : "0e289811fff3deb4de9c1c44ae581766b0defb61"
       }
     },
     {
@@ -33,7 +33,7 @@
       "location" : "https://github.com/swhitty/FlyingFox",
       "state" : {
         "branch" : "main",
-        "revision" : "3de9f8ada6d7ce40341da23a325a5656debbb180"
+        "revision" : "150911e8c6cfabd9c94e92d6d579541a6311baa0"
       }
     },
     {
@@ -78,7 +78,7 @@
       "location" : "https://github.com/apple/swift-log",
       "state" : {
         "branch" : "main",
-        "revision" : "1efe6f812904b34ed76ba28fd1f3e9f3bc94f8ec"
+        "revision" : "0e75c43ee4e4532e23a386670bc4ac8077f4ef58"
       }
     },
     {
@@ -96,7 +96,7 @@
       "location" : "https://github.com/PADL/SwiftOCA",
       "state" : {
         "branch" : "main",
-        "revision" : "5471a54421d5bf61da9ddca8635585dc817d6976"
+        "revision" : "428c736973d9e27c1e04cd9b0f0ffc491a9bd36d"
       }
     },
     {
