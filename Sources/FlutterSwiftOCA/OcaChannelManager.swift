@@ -385,7 +385,11 @@ Sendable {
   private func onConnectionStateListen(_: AnyFlutterStandardCodable?) async throws
     -> FlutterEventStream<Int32>
   {
-    await connection.connectionState.map { Int32($0.rawValue) }.eraseToAnyAsyncSequence()
+    await connection.connectionState.map { @OcaConnection [self] connectionState in
+      logger
+        .info("connection state changed: \(connectionState), statistics: \(connection.statistics)")
+      return Int32(connectionState.rawValue)
+    }.eraseToAnyAsyncSequence()
   }
 
   @Sendable
