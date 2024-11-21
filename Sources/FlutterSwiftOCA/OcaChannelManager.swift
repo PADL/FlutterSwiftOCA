@@ -132,7 +132,7 @@ Sendable {
     try await connection.connect()
   }
 
-  private func throwingFlutterError<T>(_ block: () async throws -> T) async throws -> T {
+  public func throwingFlutterError<T>(_ block: () async throws -> T) async throws -> T {
     do {
       return try await block()
     } catch let error as Ocp1Error {
