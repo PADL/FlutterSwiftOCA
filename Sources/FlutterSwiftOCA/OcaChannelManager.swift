@@ -504,6 +504,7 @@ Sendable {
       }
 
       if let subscription {
+        subscription.channel.finish()
         try await connection.removeSubscription(subscription.cancellable)
         logger.trace("unsubscribed metering from \(target)")
       }
