@@ -480,6 +480,11 @@ Sendable {
           subscriptions.withCriticalRegion { subscriptions in
             subscriptions.meteringSubscriptions[target] = nil
           }
+          Task {
+            // subscriptions are ref-counted by SwiftOCA so removing this
+            // subscription should not race with another re-subscription
+            try await connection.removeSubscription(subscription.cancellable)
+          }
         }
         subscriptions.withCriticalRegion { subscriptions in
           subscriptions.meteringSubscriptions[target] = subscription
@@ -498,16 +503,16 @@ Sendable {
   private func onMeteringEventCancel(_ target: String?) async throws {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
-
       let subscription = subscriptions.withCriticalRegion { subscriptions in
         subscriptions.meteringSubscriptions[target]
       }
 
-      if let subscription {
-        try await connection.removeSubscription(subscription.cancellable)
-        subscription.continuation.finish()
-        logger.trace("unsubscribed metering from \(target)")
+      guard let subscription else {
+        return
       }
+
+      subscription.continuation.finish()
+      logger.trace("unsubscribed metering from \(target)")
     }
   }
 
