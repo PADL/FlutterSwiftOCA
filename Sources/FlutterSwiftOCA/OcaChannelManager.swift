@@ -494,13 +494,14 @@ Sendable {
             // subscription should not race with another re-subscription
             try await connection.removeSubscription(subscription.cancellable)
           }
+          logger.trace("unsubscribed metering events from \(target)")
         }
         subscriptions.withCriticalRegion { subscriptions in
           subscriptions.meteringSubscriptions[target] = subscription
         }
 
         logger.trace(
-          "subscribed metering for \(target)"
+          "subscribed metering events for \(target)"
         )
       }
 
@@ -521,7 +522,7 @@ Sendable {
       }
 
       subscription.continuation.finish()
-      logger.trace("unsubscribed metering from \(target)")
+      logger.trace("ended metering events subscription for \(target)")
     }
   }
 
