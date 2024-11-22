@@ -73,29 +73,27 @@ Sendable {
       lhs.cancellable == rhs.cancellable
     }
 
+    typealias Continuation = AsyncStream<AnyFlutterStandardCodable?>.Continuation
+
     let cancellable: Ocp1Connection.SubscriptionCancellable
-    let channel: AsyncChannel<AnyFlutterStandardCodable?>
+    let continuation: Continuation
 
     func hash(into hasher: inout Hasher) {
       cancellable.hash(into: &hasher)
     }
 
-    func matches(target: PropertyTarget) -> Bool {
-      cancellable.event == target.propertyChangedEvent
-    }
-
     init(
       cancellable: Ocp1Connection.SubscriptionCancellable,
-      channel: AsyncChannel<AnyFlutterStandardCodable?>
+      continuation: Continuation
     ) {
       self.cancellable = cancellable
-      self.channel = channel
+      self.continuation = continuation
     }
   }
 
   private struct EventSubscriptions {
     var eventSubscriptionRefs = [OcaONo: Int]()
-    var meteringSubscriptions = Set<MeteringEventSubscription>()
+    var meteringSubscriptions = [PropertyTarget: MeteringEventSubscription]()
   }
 
   private let subscriptions: ManagedCriticalState<EventSubscriptions>
@@ -185,7 +183,7 @@ Sendable {
   }
 
   // we allow objects of both known and unknown class to be addressed over channels
-  private enum ObjectIdentification {
+  private enum ObjectIdentification: Hashable {
     /// object number in hex with no leading 0x
     case oNo(OcaONo)
     /// class ID, version, oNo, e.g. ` 1.2.3@3:01234567`
@@ -293,7 +291,7 @@ Sendable {
     }
   }
 
-  private struct PropertyTarget {
+  private struct PropertyTarget: Hashable {
     let objectID: ObjectIdentification
     let propertyID: OcaPropertyID
 
@@ -430,10 +428,9 @@ Sendable {
   @Sendable
   private func onMeteringEvent(
     target: PropertyTarget,
-    channel: AsyncChannel<AnyFlutterStandardCodable?>,
     event: OcaEvent,
     eventData data: Data
-  ) async throws {
+  ) throws {
     // FIXME: assumes all metering information is OcaDB
     let eventData = try Ocp1Decoder().decode(
       OcaPropertyChangedEventData<OcaDB>.self,
@@ -441,34 +438,15 @@ Sendable {
     )
 
     guard eventData.propertyID == target.propertyID,
-          eventData.changeType == .currentChanged
+          eventData.changeType == .currentChanged,
+          let subscription = subscriptions.withCriticalRegion({ subscriptions in
+            subscriptions.meteringSubscriptions[target]
+          })
     else {
       return
     }
 
-    try await channel.send(eventData.propertyValue.bridgeToAnyFlutterStandardCodable())
-  }
-
-  private func addMeteringSubscription(target: PropertyTarget) async throws
-    -> MeteringEventSubscription
-  {
-    let channel = AsyncChannel<AnyFlutterStandardCodable?>()
-    let cancellable = try await connection.addSubscription(
-      label: OcaMeteringSubscriptionLabel,
-      event: target.propertyChangedEvent,
-      callback: { [weak self, channel] event, eventData in
-        Task {
-          try await self?.onMeteringEvent(
-            target: target,
-            channel: channel,
-            event: event,
-            eventData: eventData
-          )
-        }
-      }
-    )
-
-    return MeteringEventSubscription(cancellable: cancellable, channel: channel)
+    try subscription.continuation.yield(eventData.propertyValue.bridgeToAnyFlutterStandardCodable())
   }
 
   @Sendable
@@ -477,18 +455,42 @@ Sendable {
   {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
-      let subscription = try await addMeteringSubscription(target: target)
-
-      subscriptions.withCriticalRegion { subscriptions in
-        precondition(!subscriptions.meteringSubscriptions.contains(subscription))
-        subscriptions.meteringSubscriptions.insert(subscription)
-      }
-
-      logger.trace(
-        "subscribed metering for \(target)"
+      let cancellable = try await connection.addSubscription(
+        label: OcaMeteringSubscriptionLabel,
+        event: target.propertyChangedEvent,
+        callback: { [weak self] event, eventData in
+          try self?.onMeteringEvent(
+            target: target,
+            event: event,
+            eventData: eventData
+          )
+        }
       )
 
-      return subscription.channel.eraseToAnyAsyncSequence()
+      let stream = AsyncStream<AnyFlutterStandardCodable?>(
+        AnyFlutterStandardCodable?.self,
+        bufferingPolicy: .bufferingNewest(1)
+      ) { continuation in
+        let subscription = MeteringEventSubscription(
+          cancellable: cancellable,
+          continuation: continuation
+        )
+
+        continuation.onTermination = { @Sendable [self] _ in
+          subscriptions.withCriticalRegion { subscriptions in
+            subscriptions.meteringSubscriptions[target] = nil
+          }
+        }
+        subscriptions.withCriticalRegion { subscriptions in
+          subscriptions.meteringSubscriptions[target] = subscription
+        }
+
+        logger.trace(
+          "subscribed metering for \(target)"
+        )
+      }
+
+      return stream.eraseToAnyAsyncSequence()
     }
   }
 
@@ -496,20 +498,14 @@ Sendable {
   private func onMeteringEventCancel(_ target: String?) async throws {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
-      var subscription: MeteringEventSubscription?
 
-      subscriptions.withCriticalRegion { subscriptions in
-        let index = subscriptions.meteringSubscriptions
-          .firstIndex(where: { $0.matches(target: target) })
-        if let index {
-          subscription = subscriptions.meteringSubscriptions[index]
-          subscriptions.meteringSubscriptions.remove(at: index)
-        }
+      let subscription = subscriptions.withCriticalRegion { subscriptions in
+        subscriptions.meteringSubscriptions[target]
       }
 
       if let subscription {
-        subscription.channel.finish()
         try await connection.removeSubscription(subscription.cancellable)
+        subscription.continuation.finish()
         logger.trace("unsubscribed metering from \(target)")
       }
     }
