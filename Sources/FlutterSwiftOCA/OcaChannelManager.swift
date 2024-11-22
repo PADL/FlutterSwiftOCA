@@ -183,7 +183,7 @@ Sendable {
   }
 
   // we allow objects of both known and unknown class to be addressed over channels
-  private enum ObjectIdentification: Hashable {
+  private enum ObjectIdentification {
     /// object number in hex with no leading 0x
     case oNo(OcaONo)
     /// class ID, version, oNo, e.g. ` 1.2.3@3:01234567`
@@ -295,6 +295,10 @@ Sendable {
     let objectID: ObjectIdentification
     let propertyID: OcaPropertyID
 
+    static func == (_ lhs: Self, _ rhs: Self) -> Bool {
+      lhs.objectID.oNo == rhs.objectID.oNo && lhs.propertyID == rhs.propertyID
+    }
+
     init(_ string: String) throws {
       let v = string.split(separator: "/", maxSplits: 2)
       guard v.count == 2 else { throw Ocp1Error.requestParameterOutOfRange }
@@ -305,6 +309,11 @@ Sendable {
 
     var propertyChangedEvent: OcaEvent {
       OcaEvent(emitterONo: objectID.oNo, eventID: OcaPropertyChangedEventID)
+    }
+
+    func hash(into hasher: inout Hasher) {
+      objectID.oNo.hash(into: &hasher)
+      propertyID.hash(into: &hasher)
     }
   }
 
