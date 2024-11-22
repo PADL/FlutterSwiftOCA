@@ -472,8 +472,8 @@ Sendable {
       let cancellable = try await connection.addSubscription(
         label: OcaMeteringSubscriptionLabel,
         event: target.propertyChangedEvent,
-        callback: { [weak self] event, eventData in
-          try self?.onMeteringEvent(
+        callback: { [self] event, eventData in
+          try onMeteringEvent(
             target: target,
             event: event,
             eventData: eventData
