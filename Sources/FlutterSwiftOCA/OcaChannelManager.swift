@@ -380,8 +380,8 @@ Sendable {
         throw Ocp1Error.notSubscribedToEvent
       }
 
-      precondition(refCount > 0)
-      refCount = refCount - 1
+      refCount -= 1
+      precondition(refCount >= 0)
 
       if refCount == 0 {
         subscriptions.eventSubscriptionRefs.removeValue(forKey: oNo)
@@ -406,11 +406,11 @@ Sendable {
         throw Ocp1Error.status(.processingFailed)
       }
 
-      addEventSubscriptionRef(object.objectNumber)
+      let refCount = addEventSubscriptionRef(object.objectNumber)
       await property.subscribe(object)
 
       logger.trace(
-        "subscribed object \(object) property \(target.propertyID) current value \(property)"
+        "subscribed events for object \(object) property \(target.propertyID) current value \(property), \(refCount + 1) reference(s) remaining"
       )
 
       return property.eraseToFlutterEventStream(object: object, logger: logger)
@@ -429,7 +429,12 @@ Sendable {
         }
 
         try await object.unsubscribe()
-        logger.trace("unsubscribed object \(object)")
+        logger.trace("unsubscribed events from object \(object), no references remaining")
+      } else {
+        logger
+          .trace(
+            "unsubscribed events from object ID \(target.objectID.oNo), \(refCount) reference(s) remaining"
+          )
       }
     }
   }
