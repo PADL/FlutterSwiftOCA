@@ -499,8 +499,12 @@ Sendable {
       var subscription: MeteringEventSubscription?
 
       subscriptions.withCriticalRegion { subscriptions in
-        subscription = subscriptions.meteringSubscriptions
-          .first(where: { $0.matches(target: target) })
+        let index = subscriptions.meteringSubscriptions
+          .firstIndex(where: { $0.matches(target: target) })
+        if let index {
+          subscription = subscriptions.meteringSubscriptions[index]
+          subscriptions.meteringSubscriptions.remove(at: index)
+        }
       }
 
       if let subscription {
