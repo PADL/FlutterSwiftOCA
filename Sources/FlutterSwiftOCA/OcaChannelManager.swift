@@ -28,8 +28,8 @@ public let OcaChannelPrefix = "oca/"
 private let OcaMeteringSubscriptionLabel = "com.padl.FlutterSwiftOCA.metering"
 
 private extension OcaONo {
-  var hexString: String {
-    String(self, radix: 16)
+  var oNoString: String {
+    "<\(String(self, radix: 16))>"
   }
 }
 
@@ -183,7 +183,7 @@ Sendable {
   }
 
   // we allow objects of both known and unknown class to be addressed over channels
-  private enum ObjectIdentification {
+  private enum ObjectIdentification: CustomStringConvertible {
     /// object number in hex with no leading 0x
     case oNo(OcaONo)
     /// class ID, version, oNo, e.g. ` 1.2.3@3:01234567`
@@ -254,6 +254,10 @@ Sendable {
       case let .objectIdentification(objectIdentification):
         return objectIdentification.oNo
       }
+    }
+
+    var description: String {
+      oNo.oNoString
     }
   }
 
@@ -433,7 +437,7 @@ Sendable {
       } else {
         logger
           .trace(
-            "unsubscribed events from object ID \(target.objectID.oNo), \(refCount) reference(s) remaining"
+            "unsubscribed events from object ID \(target), \(refCount) reference(s) remaining"
           )
       }
     }
