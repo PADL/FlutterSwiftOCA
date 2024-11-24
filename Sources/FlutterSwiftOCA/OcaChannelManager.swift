@@ -414,7 +414,7 @@ Sendable {
       await property.subscribe(object)
 
       logger.trace(
-        "subscribed events for object \(object) property \(target.propertyID) current value \(property), \(refCount + 1) reference(s) remaining"
+        "subscribed events for object \(object) property \(target.propertyID) current value \(property), \(refCount + 1) reference(s) remaining, \(propertyEventChannel.tasksCount) outstanding tasks"
       )
 
       return property.eraseToFlutterEventStream(object: object, logger: logger)
@@ -433,11 +433,14 @@ Sendable {
         }
 
         try await object.unsubscribe()
-        logger.trace("unsubscribed events from object \(object), no references remaining")
+        logger
+          .trace(
+            "unsubscribed events from object \(object), no references remaining, \(propertyEventChannel.tasksCount) outstanding tasks"
+          )
       } else {
         logger
           .trace(
-            "unsubscribed events from object ID \(target), \(refCount) reference(s) remaining"
+            "unsubscribed events from object ID \(target), \(refCount) reference(s) remaining, \(propertyEventChannel.tasksCount) outstanding tasks"
           )
       }
     }

@@ -24,16 +24,16 @@
       "location" : "https://github.com/PADL/FlutterSwift",
       "state" : {
         "branch" : "main",
-        "revision" : "6085417a06af9e9d604091a48ca7957f8875dc7e"
+        "revision" : "1dc68d463f4066bf8c7f1bc7e42373a2f796a56a"
       }
     },
     {
-      "identity" : "ioringswift",
+      "identity" : "flyingfox",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/PADL/IORingSwift",
+      "location" : "https://github.com/swhitty/FlyingFox",
       "state" : {
-        "revision" : "8499ae79bae19850773e655a37964802358f07df",
-        "version" : "0.1.2"
+        "revision" : "5653d61252af7f2dd8b43a77fb2a03678290f393",
+        "version" : "0.20.0"
       }
     },
     {
@@ -52,15 +52,6 @@
       "state" : {
         "revision" : "5c8bd186f48c16af0775972700626f0b74588278",
         "version" : "1.0.2"
-      }
-    },
-    {
-      "identity" : "swift-async-queue",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/dfed/swift-async-queue",
-      "state" : {
-        "revision" : "b51448d3347a3aedd828c491de3e78035f18759c",
-        "version" : "0.6.1"
       }
     },
     {
@@ -106,6 +97,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "5a10e9b5220be4398eb7c1d4daa5f675868dd3ef"
+      }
+    },
+    {
+      "identity" : "swiftui-sliders",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/spacenation/swiftui-sliders.git",
+      "state" : {
+        "revision" : "d5a7d856655d5c91f891c2b69d982c30fd5c7bdf",
+        "version" : "2.1.0"
       }
     }
   ],
