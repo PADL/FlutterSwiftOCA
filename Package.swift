@@ -18,7 +18,7 @@ let package = Package(
   dependencies: [
     // Dependencies declare other packages that this package depends on.
     .package(url: "https://github.com/apple/swift-async-algorithms", from: "1.0.0"),
-    .package(url: "https://github.com/apple/swift-log", branch: "main"),
+    .package(url: "https://github.com/apple/swift-log", from: "1.6.2"),
     .package(url: "https://github.com/lhoward/AsyncExtensions", from: "0.9.0"),
     .package(url: "https://github.com/PADL/SwiftOCA", branch: "main"),
     .package(url: "https://github.com/PADL/FlutterSwift", branch: "main"),
