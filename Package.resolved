@@ -23,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/PADL/FlutterSwift",
       "state" : {
-        "branch" : "main",
-        "revision" : "1dc68d463f4066bf8c7f1bc7e42373a2f796a56a"
+        "branch" : "debug-tasks",
+        "revision" : "398bf16a44e4fddc88f17896f20236e1bcedae1b"
       }
     },
     {
@@ -77,8 +77,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log",
       "state" : {
-        "branch" : "main",
-        "revision" : "0e75c43ee4e4532e23a386670bc4ac8077f4ef58"
+        "revision" : "96a2f8a0fa41e9e09af4585e2724c4e825410b91",
+        "version" : "1.6.2"
       }
     },
     {
@@ -96,7 +96,7 @@
       "location" : "https://github.com/PADL/SwiftOCA",
       "state" : {
         "branch" : "main",
-        "revision" : "5a10e9b5220be4398eb7c1d4daa5f675868dd3ef"
+        "revision" : "d0350706dbcef3c61a545b5750f9773a0a0e03d0"
       }
     },
     {
