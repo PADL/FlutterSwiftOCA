@@ -7,7 +7,7 @@ let package = Package(
   name: "FlutterSwiftOCA",
   platforms: [
     .macOS(.v14),
-    .iOS(.v16),
+    .iOS(.v17),
   ],
   products: [
     .library(
