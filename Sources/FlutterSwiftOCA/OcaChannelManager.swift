@@ -152,6 +152,7 @@ Sendable {
     try await setPropertyChannel.setMethodCallHandler(onSetProperty)
 
     try await propertyEventChannel.allowChannelBufferOverflow(true)
+    try await propertyEventChannel.resizeChannelBuffer(10)
     try await propertyEventChannel.setStreamHandler(
       onListen: onPropertyEventListen,
       onCancel: onPropertyEventCancel
