@@ -21,7 +21,7 @@ let package = Package(
     .package(url: "https://github.com/apple/swift-log", from: "1.6.2"),
     .package(url: "https://github.com/lhoward/AsyncExtensions", from: "0.9.0"),
     .package(url: "https://github.com/PADL/SwiftOCA", branch: "main"),
-    .package(url: "https://github.com/PADL/FlutterSwift", branch: "main"),
+    .package(url: "https://github.com/PADL/FlutterSwift", branch: "engine-params"),
   ],
   targets: [
     // Targets are the basic building blocks of a package. A target can define a module or a
