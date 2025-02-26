@@ -454,10 +454,7 @@ Sendable {
     eventData data: Data
   ) throws {
     // FIXME: assumes all metering information is OcaDB
-    let eventData = try Ocp1Decoder().decode(
-      OcaPropertyChangedEventData<OcaDB>.self,
-      from: data
-    )
+    let eventData = try _decodeMeteringEvent(from: data)
 
     guard eventData.propertyID == target.propertyID,
           eventData.changeType == .currentChanged,
@@ -606,4 +603,27 @@ extension OcaBoundedPropertyValue: FlutterStandardCodable {
 //     try AnyFlutterStandardCodable([value, minValue, maxValue])
     try AnyFlutterStandardCodable(value)
   }
+}
+
+private func _decodeMeteringEvent(from data: Data) throws
+  -> OcaPropertyChangedEventData<OcaDB>
+{
+  guard data.count >= 9 else {
+    throw Ocp1Error.pduTooShort
+  }
+
+  let propertyID = try OcaPropertyID(bytes: Array(data))
+  let propertyValue = data.withUnsafeBytes {
+    let value = OcaUint32(bigEndian: $0.load(fromByteOffset: 4, as: OcaUint32.self))
+    return OcaDB(bitPattern: value)
+  }
+  guard let changeType = OcaPropertyChangeType(rawValue: data[8]) else {
+    throw Ocp1Error.status(.badFormat)
+  }
+
+  return OcaPropertyChangedEventData<OcaDB>(
+    propertyID: propertyID,
+    propertyValue: propertyValue,
+    changeType: changeType
+  )
 }
