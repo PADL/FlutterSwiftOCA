@@ -317,7 +317,7 @@ Sendable {
         return nominalRate
       } else {
         let (mediaClockRate, _) = try await object.getCurrentRate()
-        logger.trace("current sample rater on \(objectID) is \(mediaClockRate.nominalRate)")
+        logger.trace("current sample rate on \(objectID) is \(mediaClockRate.nominalRate)")
         return Double(mediaClockRate.nominalRate)
       }
     }
