@@ -303,8 +303,8 @@ Sendable {
   }
 
   private func onSampleRate(
-    call: FlutterMethodCall<Float>
-  ) async throws -> Float {
+    call: FlutterMethodCall<Double>
+  ) async throws -> Double {
     try await throwingFlutterError {
       let objectID = try ObjectIdentification(call.method)
       guard let object = try await objectID.resolve(with: connection) as? OcaMediaClock3 else {
@@ -313,12 +313,12 @@ Sendable {
 
       if let nominalRate = call.arguments {
         logger.trace("setting sample rate on \(objectID) to \(nominalRate)")
-        try await object.set(currentRate: OcaMediaClockRate(nominalRate: nominalRate))
+        try await object.set(currentRate: OcaMediaClockRate(nominalRate: OcaFrequency(nominalRate)))
         return nominalRate
       } else {
         let (mediaClockRate, _) = try await object.getCurrentRate()
         logger.trace("current sample rater on \(objectID) is \(mediaClockRate.nominalRate)")
-        return mediaClockRate.nominalRate
+        return Double(mediaClockRate.nominalRate)
       }
     }
   }
