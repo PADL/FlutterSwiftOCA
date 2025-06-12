@@ -593,7 +593,7 @@ extension FlutterError {
   }
 }
 
-extension OcaBoundedPropertyValue: FlutterStandardCodable {
+extension OcaBoundedPropertyValue: @retroactive FlutterStandardCodable {
   public init(any: AnyFlutterStandardCodable) throws {
     // this should never happen
     throw FlutterSwiftError.notRepresentableAsStandardField
