@@ -59,6 +59,7 @@ Sendable {
   private let methodChannel: FlutterMethodChannel
   private let getPropertyChannel: FlutterMethodChannel
   private let setPropertyChannel: FlutterMethodChannel
+  private let setSampleRateChannel: FlutterMethodChannel
 
   // event channels
   private let propertyEventChannel: FlutterEventChannel
@@ -134,6 +135,10 @@ Sendable {
       name: "\(OcaChannelPrefix)set_property",
       binaryMessenger: binaryMessenger
     )
+    setSampleRateChannel = FlutterMethodChannel(
+      name: "\(OcaChannelPrefix)set_sample_rate",
+      binaryMessenger: binaryMessenger
+    )
     propertyEventChannel = FlutterEventChannel(
       name: "\(OcaChannelPrefix)property_event",
       binaryMessenger: binaryMessenger
@@ -150,6 +155,7 @@ Sendable {
     try await methodChannel.setMethodCallHandler(onMethod)
     try await getPropertyChannel.setMethodCallHandler(onGetProperty)
     try await setPropertyChannel.setMethodCallHandler(onSetProperty)
+    try await setSampleRateChannel.setMethodCallHandler(onSetSampleRate)
 
     try await propertyEventChannel.allowChannelBufferOverflow(true)
     try await propertyEventChannel.resizeChannelBuffer(10)
@@ -293,6 +299,27 @@ Sendable {
         throw Ocp1Error.status(response.statusCode)
       }
       return [UInt8](response.parameters.parameterData)
+    }
+  }
+
+  private func onSetSampleRate(
+    call: FlutterMethodCall<Float>
+  ) async throws -> Float {
+    try await throwingFlutterError {
+      let objectID = try ObjectIdentification(call.method)
+      guard let object = try await objectID.resolve(with: connection) as? OcaMediaClock3 else {
+        throw Ocp1Error.status(.badONo)
+      }
+
+      guard let nominalRate = call.arguments else {
+        throw Ocp1Error.status(.parameterOutOfRange)
+      }
+
+      logger.trace("setting sample rate on \(objectID) to \(nominalRate)")
+
+      try await object.set(currentRate: OcaMediaClockRate(nominalRate: nominalRate))
+
+      return nominalRate
     }
   }
 
