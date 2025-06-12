@@ -59,7 +59,7 @@ Sendable {
   private let methodChannel: FlutterMethodChannel
   private let getPropertyChannel: FlutterMethodChannel
   private let setPropertyChannel: FlutterMethodChannel
-  private let setSampleRateChannel: FlutterMethodChannel
+  private let sampleRateChannel: FlutterMethodChannel
 
   // event channels
   private let propertyEventChannel: FlutterEventChannel
@@ -135,8 +135,8 @@ Sendable {
       name: "\(OcaChannelPrefix)set_property",
       binaryMessenger: binaryMessenger
     )
-    setSampleRateChannel = FlutterMethodChannel(
-      name: "\(OcaChannelPrefix)set_sample_rate",
+    sampleRateChannel = FlutterMethodChannel(
+      name: "\(OcaChannelPrefix)sample_rate",
       binaryMessenger: binaryMessenger
     )
     propertyEventChannel = FlutterEventChannel(
@@ -155,7 +155,7 @@ Sendable {
     try await methodChannel.setMethodCallHandler(onMethod)
     try await getPropertyChannel.setMethodCallHandler(onGetProperty)
     try await setPropertyChannel.setMethodCallHandler(onSetProperty)
-    try await setSampleRateChannel.setMethodCallHandler(onSetSampleRate)
+    try await sampleRateChannel.setMethodCallHandler(onSampleRate)
 
     try await propertyEventChannel.allowChannelBufferOverflow(true)
     try await propertyEventChannel.resizeChannelBuffer(10)
@@ -302,7 +302,7 @@ Sendable {
     }
   }
 
-  private func onSetSampleRate(
+  private func onSampleRate(
     call: FlutterMethodCall<Float>
   ) async throws -> Float {
     try await throwingFlutterError {
@@ -311,15 +311,15 @@ Sendable {
         throw Ocp1Error.status(.badONo)
       }
 
-      guard let nominalRate = call.arguments else {
-        throw Ocp1Error.status(.parameterOutOfRange)
+      if let nominalRate = call.arguments {
+        logger.trace("setting sample rate on \(objectID) to \(nominalRate)")
+        try await object.set(currentRate: OcaMediaClockRate(nominalRate: nominalRate))
+        return nominalRate
+      } else {
+        let (mediaClockRate, _) = try await object.getCurrentRate()
+        logger.trace("current sample rater on \(objectID) is \(mediaClockRate.nominalRate)")
+        return mediaClockRate.nominalRate
       }
-
-      logger.trace("setting sample rate on \(objectID) to \(nominalRate)")
-
-      try await object.set(currentRate: OcaMediaClockRate(nominalRate: nominalRate))
-
-      return nominalRate
     }
   }
 
