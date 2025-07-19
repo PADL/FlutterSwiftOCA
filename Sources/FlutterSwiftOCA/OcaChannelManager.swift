@@ -34,17 +34,9 @@ private extension OcaONo {
 }
 
 private extension OcaRoot {
-  func propertySubject(with propertyID: OcaPropertyID) -> (any OcaPropertySubjectRepresentable)? {
-    for (_, keyPath) in allPropertyKeyPaths {
-      if let property =
-        self[keyPath: keyPath] as? any OcaPropertySubjectRepresentable,
-        property.propertyIDs.contains(propertyID)
-      {
-        return property
-      }
-    }
-
-    return nil
+  func propertySubject(for propertyID: OcaPropertyID) async -> (any OcaPropertySubjectRepresentable)? {
+    guard let keyPath = await propertyKeyPath(for: propertyID) else { return nil }
+    return self[keyPath: keyPath] as! OcaPropertySubjectRepresentable
   }
 }
 
@@ -356,7 +348,7 @@ Sendable {
       let target = try PropertyTarget(call.method)
       let object = try await target.objectID.resolve(with: connection)
 
-      guard let property = object.propertySubject(with: target.propertyID) else {
+      guard let property = await object.propertySubject(for: target.propertyID) else {
         logger.error("could not locate property \(target.propertyID) on \(object)")
         throw Ocp1Error.status(.processingFailed)
       }
@@ -374,7 +366,7 @@ Sendable {
       let value = call.arguments!
       let object = try await target.objectID.resolve(with: connection)
 
-      guard let property = object.propertySubject(with: target.propertyID) else {
+      guard let property = await object.propertySubject(for: target.propertyID) else {
         logger.error("could not locate property \(target.propertyID) on \(object)")
         throw Ocp1Error.status(.processingFailed)
       }
@@ -433,7 +425,7 @@ Sendable {
       let target = try PropertyTarget(target!)
       let object = try await target.objectID.resolve(with: connection)
 
-      guard let property = object.propertySubject(with: target.propertyID) else {
+      guard let property = await object.propertySubject(for: target.propertyID) else {
         logger.error("could not locate property \(target.propertyID) on \(object)")
         throw Ocp1Error.status(.processingFailed)
       }
