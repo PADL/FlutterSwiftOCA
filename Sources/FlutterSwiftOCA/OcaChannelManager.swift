@@ -34,7 +34,9 @@ private extension OcaONo {
 }
 
 private extension OcaRoot {
-  func propertySubject(for propertyID: OcaPropertyID) async -> (any OcaPropertySubjectRepresentable)? {
+  func propertySubject(for propertyID: OcaPropertyID) async
+    -> (any OcaPropertySubjectRepresentable)?
+  {
     guard let keyPath = await propertyKeyPath(for: propertyID) else { return nil }
     return self[keyPath: keyPath] as! OcaPropertySubjectRepresentable
   }
@@ -107,7 +109,8 @@ Sendable {
     connection: Ocp1Connection,
     binaryMessenger: FlutterBinaryMessenger,
     logger: Logger,
-    flags: Flags = []
+    flags: Flags = [],
+    propertyEventChannelBufferSize: Int = 10
   ) async throws {
     self.connection = connection
     self.binaryMessenger = binaryMessenger
@@ -150,7 +153,7 @@ Sendable {
     try await sampleRateChannel.setMethodCallHandler(onSampleRate)
 
     try await propertyEventChannel.allowChannelBufferOverflow(true)
-    try await propertyEventChannel.resizeChannelBuffer(10)
+    try await propertyEventChannel.resizeChannelBuffer(propertyEventChannelBufferSize)
     try await propertyEventChannel.setStreamHandler(
       onListen: onPropertyEventListen,
       onCancel: onPropertyEventCancel
