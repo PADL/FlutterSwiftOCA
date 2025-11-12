@@ -49,6 +49,7 @@ Sendable {
   private let binaryMessenger: FlutterBinaryMessenger
   private let logger: Logger
   private let flags: Flags
+  private let channelSuffix: String?
 
   // method channels
   private let methodChannel: FlutterMethodChannel
@@ -96,6 +97,14 @@ Sendable {
 
   private let subscriptions: Mutex<EventSubscriptions>
 
+  private static func _makeChannelPrefix(with channelSuffix: String?) -> String {
+    if let channelSuffix {
+      return OcaChannelPrefix + channelSuffix + "/"
+    } else {
+      return OcaChannelPrefix
+    }
+  }
+
   public struct Flags: OptionSet, Sendable {
     public typealias RawValue = UInt
 
@@ -113,28 +122,31 @@ Sendable {
     binaryMessenger: FlutterBinaryMessenger,
     logger: Logger,
     flags: Flags = [],
-    propertyEventChannelBufferSize: Int = 10
+    propertyEventChannelBufferSize: Int = 10,
+    channelSuffix: String? = nil
   ) async throws {
     self.connection = connection
     self.binaryMessenger = binaryMessenger
     self.logger = logger
     self.flags = flags
+    self.channelSuffix = channelSuffix
     subscriptions = Mutex(EventSubscriptions())
+    let channelPrefix = Self._makeChannelPrefix(with: channelSuffix)
 
     methodChannel = FlutterMethodChannel(
-      name: "\(OcaChannelPrefix)method",
+      name: "\(channelPrefix)method",
       binaryMessenger: binaryMessenger
     )
     getPropertyChannel = FlutterMethodChannel(
-      name: "\(OcaChannelPrefix)get_property",
+      name: "\(channelPrefix)get_property",
       binaryMessenger: binaryMessenger
     )
     setPropertyChannel = FlutterMethodChannel(
-      name: "\(OcaChannelPrefix)set_property",
+      name: "\(channelPrefix)set_property",
       binaryMessenger: binaryMessenger
     )
     sampleRateChannel = FlutterMethodChannel(
-      name: "\(OcaChannelPrefix)sample_rate",
+      name: "\(channelPrefix)sample_rate",
       binaryMessenger: binaryMessenger
     )
     datasetBlobChannel = FlutterMethodChannel(
@@ -146,15 +158,15 @@ Sendable {
       binaryMessenger: binaryMessenger
     )
     propertyEventChannel = FlutterEventChannel(
-      name: "\(OcaChannelPrefix)property_event",
+      name: "\(channelPrefix)property_event",
       binaryMessenger: binaryMessenger
     )
     meteringEventChannel = FlutterEventChannel(
-      name: "\(OcaChannelPrefix)metering_event",
+      name: "\(channelPrefix)metering_event",
       binaryMessenger: binaryMessenger
     )
     connectionStateChannel = FlutterEventChannel(
-      name: "\(OcaChannelPrefix)connection_state",
+      name: "\(channelPrefix)connection_state",
       binaryMessenger: binaryMessenger
     )
 
@@ -191,7 +203,10 @@ Sendable {
     do {
       return try await block()
     } catch let error as Ocp1Error {
-      let flutterError = FlutterError(error: error)
+      let flutterError = FlutterError(
+        error: error,
+        channelPrefix: Self._makeChannelPrefix(with: channelSuffix)
+      )
       logger.trace("throwing \(flutterError)")
       throw flutterError
     }
@@ -683,10 +698,11 @@ extension FlutterError {
   init(
     error: Ocp1Error,
     message: String? = nil,
-    stacktrace: String? = nil
+    stacktrace: String? = nil,
+    channelPrefix: String
   ) {
     self.init(
-      code: "\(OcaChannelPrefix)" + String(describing: error),
+      code: "\(channelPrefix)" + String(describing: error),
       message: message,
       stacktrace: stacktrace
     )
