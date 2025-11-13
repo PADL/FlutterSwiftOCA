@@ -54,6 +54,8 @@ Sendable {
   private let getPropertyChannel: FlutterMethodChannel
   private let setPropertyChannel: FlutterMethodChannel
   private let sampleRateChannel: FlutterMethodChannel
+  private let datasetChannel: FlutterMethodChannel // storing param datasets in a remote slot
+  private let datasetBlobChannel: FlutterMethodChannel // fetching param datasets as a blob
 
   // event channels
   private let propertyEventChannel: FlutterEventChannel
@@ -134,6 +136,14 @@ Sendable {
       name: "\(OcaChannelPrefix)sample_rate",
       binaryMessenger: binaryMessenger
     )
+    datasetBlobChannel = FlutterMethodChannel(
+      name: "\(OcaChannelPrefix)dataset_blob",
+      binaryMessenger: binaryMessenger
+    )
+    datasetChannel = FlutterMethodChannel(
+      name: "\(OcaChannelPrefix)dataset",
+      binaryMessenger: binaryMessenger
+    )
     propertyEventChannel = FlutterEventChannel(
       name: "\(OcaChannelPrefix)property_event",
       binaryMessenger: binaryMessenger
@@ -151,6 +161,8 @@ Sendable {
     try await getPropertyChannel.setMethodCallHandler(onGetProperty)
     try await setPropertyChannel.setMethodCallHandler(onSetProperty)
     try await sampleRateChannel.setMethodCallHandler(onSampleRate)
+    try await datasetChannel.setMethodCallHandler(onDataset)
+    try await datasetBlobChannel.setMethodCallHandler(onDatasetBlob)
 
     try await propertyEventChannel.allowChannelBufferOverflow(true)
     try await propertyEventChannel.resizeChannelBuffer(propertyEventChannelBufferSize)
@@ -314,6 +326,71 @@ Sendable {
         let (mediaClockRate, _) = try await object.getCurrentRate()
         logger.trace("current sample rate on \(objectID) is \(mediaClockRate.nominalRate)")
         return Double(mediaClockRate.nominalRate)
+      }
+    }
+  }
+
+  private struct DatasetTarget {
+    enum Method: String { case apply; case store; case fetch }
+
+    let objectID: ObjectIdentification
+    let method: Method
+
+    init(_ string: String) throws {
+      let v = string.split(separator: "/", maxSplits: 2)
+      guard v.count == 2 else { throw Ocp1Error.requestParameterOutOfRange }
+
+      objectID = try ObjectIdentification(String(v[0]))
+      guard let method = Method(rawValue: String(v[1])) else {
+        throw Ocp1Error.status(.badMethod)
+      }
+      self.method = method
+    }
+
+    func resolve(with connection: Ocp1Connection) async throws -> OcaBlock {
+      guard let block = try await objectID.resolve(with: connection) as? OcaBlock else {
+        throw Ocp1Error.objectClassMismatch
+      }
+      return block
+    }
+  }
+
+  private func onDataset(
+    call: FlutterMethodCall<OcaUint32>
+  ) async throws -> FlutterNull {
+    try await throwingFlutterError {
+      let target = try DatasetTarget(call.method)
+      let object = try await target.resolve(with: connection)
+
+      guard let paramDataset = call.arguments else { throw Ocp1Error.status(.parameterError) }
+      switch target.method {
+      case .apply:
+        try await object.apply(paramDataset: paramDataset)
+      case .store:
+        try await object.store(currentParameterData: paramDataset)
+      default:
+        throw Ocp1Error.status(.badMethod)
+      }
+    }
+    return FlutterNull()
+  }
+
+  private func onDatasetBlob(
+    call: FlutterMethodCall<[UInt8]>
+  ) async throws -> [UInt8] {
+    try await throwingFlutterError {
+      let target = try DatasetTarget(call.method)
+      let object = try await target.resolve(with: connection)
+
+      switch target.method {
+      case .fetch:
+        return try await Array(object.fetchCurrentParameterData())
+      case .store:
+        guard let arguments = call.arguments else { throw Ocp1Error.status(.parameterError) }
+        try await object.apply(parameterData: OcaLongBlob(arguments))
+        return []
+      default:
+        throw Ocp1Error.status(.badMethod)
       }
     }
   }
