@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2024 PADL Software Pty Ltd
+// Copyright (c) 2023-2025 PADL Software Pty Ltd
 //
 // Licensed under the Apache License, Version 2.0 (the License);
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import Foundation
 import Logging
 @_spi(SwiftOCAPrivate)
 import SwiftOCA
+import Synchronization
 
 public let OcaChannelPrefix = "oca/"
 
@@ -93,7 +94,7 @@ Sendable {
     var meteringSubscriptions = [PropertyTarget: MeteringEventSubscription]()
   }
 
-  private let subscriptions: ManagedCriticalState<EventSubscriptions>
+  private let subscriptions: Mutex<EventSubscriptions>
 
   public struct Flags: OptionSet, Sendable {
     public typealias RawValue = UInt
@@ -118,7 +119,7 @@ Sendable {
     self.binaryMessenger = binaryMessenger
     self.logger = logger
     self.flags = flags
-    subscriptions = ManagedCriticalState(EventSubscriptions())
+    subscriptions = Mutex(EventSubscriptions())
 
     methodChannel = FlutterMethodChannel(
       name: "\(OcaChannelPrefix)method",
@@ -470,7 +471,7 @@ Sendable {
 
   @discardableResult
   private func addEventSubscriptionRef(_ oNo: OcaONo) -> Int { // returns old ref count
-    subscriptions.withCriticalRegion { subscriptions in
+    subscriptions.withLock { subscriptions in
       let refCount = subscriptions.eventSubscriptionRefs[oNo] ?? 0
       subscriptions.eventSubscriptionRefs[oNo] = refCount + 1
       return refCount
@@ -479,7 +480,7 @@ Sendable {
 
   @discardableResult
   private func removeEventSubscriptionRef(_ oNo: OcaONo) throws -> Int { // returns new ref count
-    try subscriptions.withCriticalRegion { subscriptions in
+    try subscriptions.withLock { subscriptions in
       guard var refCount = subscriptions.eventSubscriptionRefs[oNo] else {
         throw Ocp1Error.notSubscribedToEvent
       }
@@ -557,7 +558,7 @@ Sendable {
 
     guard eventData.propertyID == target.propertyID,
           eventData.changeType == .currentChanged,
-          let subscription = subscriptions.withCriticalRegion({ subscriptions in
+          let subscription = subscriptions.withLock({ subscriptions in
             subscriptions.meteringSubscriptions[target]
           })
     else {
@@ -595,7 +596,7 @@ Sendable {
         )
 
         continuation.onTermination = { @Sendable [self] _ in
-          subscriptions.withCriticalRegion { subscriptions in
+          subscriptions.withLock { subscriptions in
             subscriptions.meteringSubscriptions[target] = nil
           }
           Task {
@@ -605,7 +606,7 @@ Sendable {
           }
           logger.trace("unsubscribed metering events from \(target)")
         }
-        subscriptions.withCriticalRegion { subscriptions in
+        subscriptions.withLock { subscriptions in
           subscriptions.meteringSubscriptions[target] = subscription
         }
 
@@ -622,7 +623,7 @@ Sendable {
   private func onMeteringEventCancel(_ target: String?) async throws {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
-      let subscription = subscriptions.withCriticalRegion { subscriptions in
+      let subscription = subscriptions.withLock { subscriptions in
         subscriptions.meteringSubscriptions[target]
       }
 
