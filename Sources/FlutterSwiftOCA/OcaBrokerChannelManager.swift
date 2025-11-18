@@ -25,6 +25,10 @@ import SwiftOCA
 
 public let OcaBrokerChannelPrefix = "oca-broker/"
 
+public protocol OcaBrokerChannelManagerDelegate: AnyObject {
+  func didConnect(deviceIdentifier: OcaConnectionBroker.DeviceIdentifier, connection: Ocp1Connection)
+}
+
 public final class OcaBrokerChannelManager: @unchecked Sendable {
   private let broker: OcaConnectionBroker
   private let binaryMessenger: FlutterBinaryMessenger
@@ -36,17 +40,21 @@ public final class OcaBrokerChannelManager: @unchecked Sendable {
   private let channelManagers =
     ManagedCriticalState<[OcaConnectionBroker.DeviceIdentifier: OcaChannelManager]>([:])
 
+  private weak var delegate: OcaBrokerChannelManagerDelegate?
+
   public init(
     connectionOptions: Ocp1ConnectionOptions,
     binaryMessenger: FlutterBinaryMessenger,
     logger: Logger,
     flags: OcaChannelManager.Flags = [],
-    propertyEventChannelBufferSize: Int = 10
+    propertyEventChannelBufferSize: Int = 10,
+    delegate: OcaBrokerChannelManagerDelegate? = nil
   ) async throws {
     broker = await OcaConnectionBroker(connectionOptions: connectionOptions)
     self.binaryMessenger = binaryMessenger
     self.logger = logger
     self.flags = flags
+    self.delegate = delegate
 
     eventChannel = FlutterEventChannel(
       name: "\(OcaBrokerChannelPrefix)events",
@@ -82,6 +90,7 @@ public final class OcaBrokerChannelManager: @unchecked Sendable {
 
         try await broker.connect(device: deviceIdentifier)
         try await broker.withDeviceConnection(deviceIdentifier) { connection in
+          delegate?.didConnect(deviceIdentifier: deviceIdentifier, connection: connection)
           channelManager = try await OcaChannelManager(
             connection: connection,
             binaryMessenger: binaryMessenger,
