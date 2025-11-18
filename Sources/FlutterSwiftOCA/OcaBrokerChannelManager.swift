@@ -25,11 +25,9 @@ import SwiftOCA
 
 public let OcaBrokerChannelPrefix = "oca-broker/"
 
-public protocol OcaBrokerChannelManagerDelegate: AnyObject {
-  func didConnect(deviceIdentifier: OcaConnectionBroker.DeviceIdentifier, connection: Ocp1Connection)
-}
+public protocol OcaBrokerChannelManagerDelegate: AnyObject, Sendable {}
 
-public final class OcaBrokerChannelManager: @unchecked Sendable {
+public final class OcaBrokerChannelManager: Sendable {
   private let broker: OcaConnectionBroker
   private let binaryMessenger: FlutterBinaryMessenger
   private let logger: Logger
@@ -40,7 +38,12 @@ public final class OcaBrokerChannelManager: @unchecked Sendable {
   private let channelManagers =
     ManagedCriticalState<[OcaConnectionBroker.DeviceIdentifier: OcaChannelManager]>([:])
 
-  private weak var delegate: OcaBrokerChannelManagerDelegate?
+  public typealias OnConnectionCallback = @Sendable (
+    OcaConnectionBroker.DeviceIdentifier,
+    Ocp1Connection
+  ) -> ()
+
+  private let onConnectionCallback: OnConnectionCallback?
 
   public init(
     connectionOptions: Ocp1ConnectionOptions,
@@ -48,13 +51,13 @@ public final class OcaBrokerChannelManager: @unchecked Sendable {
     logger: Logger,
     flags: OcaChannelManager.Flags = [],
     propertyEventChannelBufferSize: Int = 10,
-    delegate: OcaBrokerChannelManagerDelegate? = nil
+    onConnectionCallback: OnConnectionCallback? = nil
   ) async throws {
     broker = await OcaConnectionBroker(connectionOptions: connectionOptions)
     self.binaryMessenger = binaryMessenger
     self.logger = logger
     self.flags = flags
-    self.delegate = delegate
+    self.onConnectionCallback = onConnectionCallback
 
     eventChannel = FlutterEventChannel(
       name: "\(OcaBrokerChannelPrefix)events",
@@ -90,7 +93,7 @@ public final class OcaBrokerChannelManager: @unchecked Sendable {
 
         try await broker.connect(device: deviceIdentifier)
         try await broker.withDeviceConnection(deviceIdentifier) { connection in
-          delegate?.didConnect(deviceIdentifier: deviceIdentifier, connection: connection)
+          onConnectionCallback?(deviceIdentifier, connection)
           channelManager = try await OcaChannelManager(
             connection: connection,
             binaryMessenger: binaryMessenger,
