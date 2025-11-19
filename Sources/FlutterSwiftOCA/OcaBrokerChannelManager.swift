@@ -41,7 +41,7 @@ public final class OcaBrokerChannelManager: Sendable {
   public typealias OnConnectionCallback = @Sendable (
     OcaConnectionBroker.DeviceIdentifier,
     Ocp1Connection
-  ) -> ()
+  ) async throws -> ()
 
   private let onConnectionCallback: OnConnectionCallback?
 
@@ -93,7 +93,7 @@ public final class OcaBrokerChannelManager: Sendable {
 
         try await broker.connect(device: deviceIdentifier)
         try await broker.withDeviceConnection(deviceIdentifier) { connection in
-          onConnectionCallback?(deviceIdentifier, connection)
+          try await onConnectionCallback?(deviceIdentifier, connection)
           channelManager = try await OcaChannelManager(
             connection: connection,
             binaryMessenger: binaryMessenger,
