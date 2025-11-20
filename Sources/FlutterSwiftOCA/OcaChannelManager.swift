@@ -15,7 +15,7 @@
 //
 
 import AsyncAlgorithms
-import AsyncExtensions
+@preconcurrency import AsyncExtensions
 @_spi(FlutterSwiftPrivate)
 import FlutterSwift
 import Foundation
@@ -38,7 +38,7 @@ private extension OcaRoot {
     -> (any OcaPropertySubjectRepresentable)?
   {
     guard let keyPath = await propertyKeyPath(for: propertyID) else { return nil }
-    return self[keyPath: keyPath] as! OcaPropertySubjectRepresentable
+    return self[keyPath: keyPath] as! any OcaPropertySubjectRepresentable
   }
 }
 
@@ -62,7 +62,7 @@ Sendable {
   private let meteringEventChannel: FlutterEventChannel
   private let connectionStateChannel: FlutterEventChannel
 
-  private final class MeteringEventSubscription: Hashable {
+  private final class MeteringEventSubscription: Hashable, Sendable {
     static func == (
       lhs: OcaChannelManager.MeteringEventSubscription,
       rhs: OcaChannelManager.MeteringEventSubscription
