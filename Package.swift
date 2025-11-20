@@ -38,7 +38,7 @@ let package = Package(
         "FlutterSwift",
       ],
       swiftSettings: [
-        .swiftLanguageMode(.v5, .when(platforms: [.macOS, .iOS])),
+        .swiftLanguageMode(.v5),
         .interoperabilityMode(.Cxx, .when(platforms: [.macOS, .iOS, .linux])),
       ]
     ),
@@ -46,7 +46,7 @@ let package = Package(
       name: "FlutterSwiftOCATests",
       dependencies: ["FlutterSwiftOCA"],
       swiftSettings: [
-        .swiftLanguageMode(.v5, .when(platforms: [.macOS, .iOS])),
+        .swiftLanguageMode(.v5),
         .interoperabilityMode(.Cxx, .when(platforms: [.macOS, .iOS, .linux])),
       ]
     ),
