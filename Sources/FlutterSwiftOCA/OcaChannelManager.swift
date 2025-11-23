@@ -288,6 +288,7 @@ Sendable {
     }
   }
 
+  @Sendable
   private func onMethod(
     call: FlutterMethodCall<[Data]>
   ) async throws -> [UInt8] {
@@ -309,6 +310,7 @@ Sendable {
     }
   }
 
+  @Sendable
   private func onSampleRate(
     call: FlutterMethodCall<Double>
   ) async throws -> Double {
@@ -355,6 +357,7 @@ Sendable {
     }
   }
 
+  @Sendable
   private func onDataset(
     call: FlutterMethodCall<OcaUint32>
   ) async throws -> FlutterNull {
@@ -375,6 +378,7 @@ Sendable {
     return FlutterNull()
   }
 
+  @Sendable
   private func onDatasetBlob(
     call: FlutterMethodCall<[UInt8]>
   ) async throws -> [UInt8] {
@@ -421,6 +425,7 @@ Sendable {
     }
   }
 
+  @Sendable
   private func onGetProperty(
     call: FlutterMethodCall<FlutterNull>
   ) async throws -> AnyFlutterStandardCodable {
@@ -438,6 +443,7 @@ Sendable {
     }
   }
 
+  @Sendable
   private func onSetProperty(
     call: FlutterMethodCall<AnyFlutterStandardCodable>
   ) async throws -> AnyFlutterStandardCodable {
