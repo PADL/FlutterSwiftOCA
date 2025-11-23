@@ -114,7 +114,7 @@ Sendable {
     logger: Logger,
     flags: Flags = [],
     propertyEventChannelBufferSize: Int = 10
-  ) async throws {
+  ) throws {
     self.connection = connection
     self.binaryMessenger = binaryMessenger
     self.logger = logger
@@ -178,11 +178,13 @@ Sendable {
       onCancel: onConnectionStateCancel
     )
 
-    try await propertyEventChannel.allowChannelBufferOverflow(true)
-    try await propertyEventChannel.resizeChannelBuffer(propertyEventChannelBufferSize)
-    try await meteringEventChannel.allowChannelBufferOverflow(true)
-    try await connectionStateChannel.allowChannelBufferOverflow(true)
+    try propertyEventChannel.allowChannelBufferOverflow(true)
+    try propertyEventChannel.resizeChannelBuffer(propertyEventChannelBufferSize)
+    try meteringEventChannel.allowChannelBufferOverflow(true)
+    try connectionStateChannel.allowChannelBufferOverflow(true)
+  }
 
+  public func connect() async throws {
     try await connection.connect()
   }
 
