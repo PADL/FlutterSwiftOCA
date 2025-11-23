@@ -8,7 +8,7 @@ on:
 jobs:
   linux-wayland:
     runs-on: ubuntu-24.04
-    container: swift:6.1
+    container: swift:6.2
     env:
       FLUTTER_SWIFT_BACKEND: wayland
     steps:
