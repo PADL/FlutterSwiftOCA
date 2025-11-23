@@ -107,6 +107,7 @@ Sendable {
     public static let persistSubscriptions = Flags(rawValue: 1 << 0)
   }
 
+  @FlutterPlatformThreadActor
   public init(
     connection: Ocp1Connection,
     binaryMessenger: FlutterBinaryMessenger,
@@ -157,31 +158,30 @@ Sendable {
       binaryMessenger: binaryMessenger
     )
 
-    try await methodChannel.setMethodCallHandler(onMethod)
-    try await getPropertyChannel.setMethodCallHandler(onGetProperty)
-    try await setPropertyChannel.setMethodCallHandler(onSetProperty)
-    try await sampleRateChannel.setMethodCallHandler(onSampleRate)
-    try await datasetChannel.setMethodCallHandler(onDataset)
-    try await datasetBlobChannel.setMethodCallHandler(onDatasetBlob)
+    try methodChannel.setMethodCallHandler(onMethod)
+    try getPropertyChannel.setMethodCallHandler(onGetProperty)
+    try setPropertyChannel.setMethodCallHandler(onSetProperty)
+    try sampleRateChannel.setMethodCallHandler(onSampleRate)
+    try datasetChannel.setMethodCallHandler(onDataset)
+    try datasetBlobChannel.setMethodCallHandler(onDatasetBlob)
 
-    try await propertyEventChannel.allowChannelBufferOverflow(true)
-    try await propertyEventChannel.resizeChannelBuffer(propertyEventChannelBufferSize)
-    try await propertyEventChannel.setStreamHandler(
+    try propertyEventChannel.setStreamHandler(
       onListen: onPropertyEventListen,
       onCancel: onPropertyEventCancel
     )
-
-    try await meteringEventChannel.allowChannelBufferOverflow(true)
-    try await meteringEventChannel.setStreamHandler(
+    try meteringEventChannel.setStreamHandler(
       onListen: onMeteringEventListen,
       onCancel: onMeteringEventCancel
     )
-
-    try await connectionStateChannel.allowChannelBufferOverflow(true)
-    try await connectionStateChannel.setStreamHandler(
+    try connectionStateChannel.setStreamHandler(
       onListen: onConnectionStateListen,
       onCancel: onConnectionStateCancel
     )
+
+    try await propertyEventChannel.allowChannelBufferOverflow(true)
+    try await propertyEventChannel.resizeChannelBuffer(propertyEventChannelBufferSize)
+    try await meteringEventChannel.allowChannelBufferOverflow(true)
+    try await connectionStateChannel.allowChannelBufferOverflow(true)
 
     try await connection.connect()
   }
