@@ -24,6 +24,7 @@ import Logging
 import SwiftOCA
 
 public let OcaChannelPrefix = "oca/"
+public let OcaPlatformStateReadyMethodName = "platform_ready"
 
 private let OcaMeteringSubscriptionLabel = "com.padl.FlutterSwiftOCA.metering"
 
@@ -56,6 +57,7 @@ Sendable {
   private let sampleRateChannel: FlutterMethodChannel
   private let datasetChannel: FlutterMethodChannel // storing param datasets in a remote slot
   private let datasetBlobChannel: FlutterMethodChannel // fetching param datasets as a blob
+  private let platformStateChannel: FlutterMethodChannel // report platform channel status
 
   // event channels
   private let propertyEventChannel: FlutterEventChannel
@@ -145,6 +147,10 @@ Sendable {
       name: "\(OcaChannelPrefix)dataset",
       binaryMessenger: binaryMessenger
     )
+    platformStateChannel = FlutterMethodChannel(
+      name: "\(OcaChannelPrefix)platform_state",
+      binaryMessenger: binaryMessenger
+    )
     propertyEventChannel = FlutterEventChannel(
       name: "\(OcaChannelPrefix)property_event",
       binaryMessenger: binaryMessenger
@@ -182,6 +188,13 @@ Sendable {
     try propertyEventChannel.resizeChannelBuffer(propertyEventChannelBufferSize)
     try meteringEventChannel.allowChannelBufferOverflow(true)
     try connectionStateChannel.allowChannelBufferOverflow(true)
+
+    logger.trace("OCA platform channels ready")
+    
+    Task{
+      // let Flutter code know it is safe to subsribe to the channels above
+      try await platformStateChannel.invoke(method: OcaPlatformStateReadyMethodName, arguments: true)
+    }
   }
 
   public func connect() async throws {
