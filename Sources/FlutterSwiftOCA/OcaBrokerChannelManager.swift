@@ -134,7 +134,7 @@ public final class OcaBrokerChannelManager: Sendable {
           return nil
         }
 
-        return try AnyFlutterStandardCodable([eventTypeString, event.deviceIdentifier.id])
+        return try AnyFlutterStandardCodable([eventTypeString, event.deviceIdentifier.id, event.deviceIdentifier.name])
       }.eraseToAnyAsyncSequence()
     }
   }
