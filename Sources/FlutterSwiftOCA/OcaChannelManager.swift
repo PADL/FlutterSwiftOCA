@@ -160,7 +160,7 @@ Sendable {
       binaryMessenger: binaryMessenger
     )
     platformStateChannel = FlutterMethodChannel(
-      name: "\(OcaChannelPrefix)platform_state",
+      name: "\(channelPrefix)platform_state",
       binaryMessenger: binaryMessenger
     )
     propertyEventChannel = FlutterEventChannel(
@@ -201,7 +201,7 @@ Sendable {
     try meteringEventChannel.allowChannelBufferOverflow(true)
     try connectionStateChannel.allowChannelBufferOverflow(true)
 
-    logger.trace("OCA platform channels ready")
+    logger.trace("OCA platform channels ready (\(channelSuffix ?? "no suffix"))")
     
     Task{
       // let Flutter code know it is safe to subsribe to the channels above
