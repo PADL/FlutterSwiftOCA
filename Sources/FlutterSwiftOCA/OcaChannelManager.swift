@@ -64,6 +64,9 @@ Sendable {
   private let meteringEventChannel: FlutterEventChannel
   private let connectionStateChannel: FlutterEventChannel
 
+  private let identificationSensor: OcaIdentificationSensor?
+  private let identifyEventChannel: FlutterEventChannel? // report identify events
+
   private final class MeteringEventSubscription: Hashable, Sendable {
     static func == (
       lhs: OcaChannelManager.MeteringEventSubscription,
@@ -115,7 +118,8 @@ Sendable {
     binaryMessenger: FlutterBinaryMessenger,
     logger: Logger,
     flags: Flags = [],
-    propertyEventChannelBufferSize: Int = 10
+    propertyEventChannelBufferSize: Int = 10,
+    identificationSensor: OcaIdentificationSensor? = nil
   ) throws {
     self.connection = connection
     self.binaryMessenger = binaryMessenger
@@ -164,6 +168,16 @@ Sendable {
       binaryMessenger: binaryMessenger
     )
 
+    self.identificationSensor = identificationSensor
+    if identificationSensor != nil {
+      identifyEventChannel = FlutterEventChannel(
+        name: "\(OcaChannelPrefix)identify",
+        binaryMessenger: binaryMessenger
+      )
+    } else {
+      identifyEventChannel = nil
+    }
+
     try methodChannel.setMethodCallHandler(onMethod)
     try getPropertyChannel.setMethodCallHandler(onGetProperty)
     try setPropertyChannel.setMethodCallHandler(onSetProperty)
@@ -182,6 +196,10 @@ Sendable {
     try connectionStateChannel.setStreamHandler(
       onListen: onConnectionStateListen,
       onCancel: onConnectionStateCancel
+    )
+    try identifyEventChannel?.setStreamHandler(
+      onListen: onIdentifyEventListen,
+      onCancel: onIdentifyEventCancel
     )
 
     try propertyEventChannel.allowChannelBufferOverflow(true)
@@ -673,6 +691,16 @@ Sendable {
 
   @Sendable
   private func onConnectionStateCancel(_: AnyFlutterStandardCodable?) async throws {}
+
+  @Sendable
+  private func onIdentifyEventListen(_: AnyFlutterStandardCodable?) async throws
+    -> FlutterEventStream<Bool>
+  {
+    await identificationSensor!.identifyEvents.map { true }.eraseToAnyAsyncSequence()
+  }
+
+  @Sendable
+  private func onIdentifyEventCancel(_: AnyFlutterStandardCodable?) async throws {}
 }
 
 extension OcaPropertySubjectRepresentable {
