@@ -81,7 +81,7 @@ public final class OcaBrokerChannelManager: Sendable {
   @Sendable @FlutterPlatformThreadActor
   private func onControl(
     call: FlutterMethodCall<String>
-  ) async throws -> Bool {
+  ) async throws -> [String] {
     try await throwingFlutterError {
       guard let deviceIdentifierString = call.arguments,
             let deviceIdentifier = OcaConnectionBroker.DeviceIdentifier(deviceIdentifierString)
@@ -110,10 +110,12 @@ public final class OcaBrokerChannelManager: Sendable {
       case "disconnect":
         channelManagers.withCriticalRegion { $0[deviceIdentifier] = nil }
         try await broker.disconnect(device: deviceIdentifier)
+      case "list":
+        return await broker.registeredDevices.map { String(describing: $0) }
       default:
-        return false
+        break
       }
-      return true
+      return []
     }
   }
 
@@ -134,7 +136,11 @@ public final class OcaBrokerChannelManager: Sendable {
           return nil
         }
 
-        return try AnyFlutterStandardCodable([eventTypeString, event.deviceIdentifier.id, event.deviceIdentifier.name])
+        return try AnyFlutterStandardCodable([
+          eventTypeString,
+          event.deviceIdentifier.id,
+          event.deviceIdentifier.name,
+        ])
       }.eraseToAnyAsyncSequence()
     }
   }
