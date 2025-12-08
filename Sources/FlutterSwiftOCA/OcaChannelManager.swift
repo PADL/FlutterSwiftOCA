@@ -64,7 +64,7 @@ Sendable {
   private let meteringEventChannel: FlutterEventChannel
   private let connectionStateChannel: FlutterEventChannel
 
-  private let identificationSensor: OcaIdentificationSensor?
+  private let identificationSensorONo: OcaONo // optional object ID of identification sensor
   private let identifyEventChannel: FlutterEventChannel? // report identify events
 
   private final class MeteringEventSubscription: Hashable, Sendable {
@@ -119,7 +119,7 @@ Sendable {
     logger: Logger,
     flags: Flags = [],
     propertyEventChannelBufferSize: Int = 10,
-    identificationSensor: OcaIdentificationSensor? = nil
+    identificationSensorONo: OcaONo = OcaInvalidONo
   ) throws {
     self.connection = connection
     self.binaryMessenger = binaryMessenger
@@ -168,8 +168,8 @@ Sendable {
       binaryMessenger: binaryMessenger
     )
 
-    self.identificationSensor = identificationSensor
-    if identificationSensor != nil {
+    self.identificationSensorONo = identificationSensorONo
+    if identificationSensorONo != OcaInvalidONo {
       identifyEventChannel = FlutterEventChannel(
         name: "\(OcaChannelPrefix)identify",
         binaryMessenger: binaryMessenger
@@ -208,10 +208,13 @@ Sendable {
     try connectionStateChannel.allowChannelBufferOverflow(true)
 
     logger.trace("OCA platform channels ready")
-    
-    Task{
+
+    Task {
       // let Flutter code know it is safe to subsribe to the channels above
-      try await platformStateChannel.invoke(method: OcaPlatformStateReadyMethodName, arguments: true)
+      try await platformStateChannel.invoke(
+        method: OcaPlatformStateReadyMethodName,
+        arguments: true
+      )
     }
   }
 
@@ -696,7 +699,14 @@ Sendable {
   private func onIdentifyEventListen(_: AnyFlutterStandardCodable?) async throws
     -> FlutterEventStream<Bool>
   {
-    await identificationSensor!.identifyEvents.map { true }.eraseToAnyAsyncSequence()
+    guard let identificationSensor = try await connection.resolve(object: .init(
+      oNo: identificationSensorONo,
+      classIdentification: OcaIdentificationSensor.classIdentification
+    )) as? OcaIdentificationSensor else {
+      throw Ocp1Error.noMatchingTypeForClass
+    }
+
+    return await identificationSensor.identifyEvents.map { true }.eraseToAnyAsyncSequence()
   }
 
   @Sendable
