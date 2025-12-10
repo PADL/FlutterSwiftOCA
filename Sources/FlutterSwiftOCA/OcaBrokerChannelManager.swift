@@ -83,13 +83,14 @@ public final class OcaBrokerChannelManager: Sendable {
     call: FlutterMethodCall<String>
   ) async throws -> [String] {
     try await throwingFlutterError {
-      guard let deviceIdentifierString = call.arguments,
-            let deviceIdentifier = OcaConnectionBroker.DeviceIdentifier(deviceIdentifierString)
-      else {
-        throw Ocp1Error.status(.badFormat)
-      }
       switch call.method {
+        
       case "connect":
+        guard let deviceIdentifierString = call.arguments,
+              let deviceIdentifier = OcaConnectionBroker.DeviceIdentifier(deviceIdentifierString)
+        else {
+          throw Ocp1Error.status(.badFormat)
+        }
         try await broker.connect(device: deviceIdentifier)
         let connection = try await broker.withDeviceConnection(deviceIdentifier) { connection in
           try await onConnectionCallback?(deviceIdentifier, connection)
@@ -105,13 +106,19 @@ public final class OcaBrokerChannelManager: Sendable {
             channelSuffix: String(describing: deviceIdentifier)
           )
         }
-
         channelManagers.withCriticalRegion { $0[deviceIdentifier] = channelManager }
+        
       case "disconnect":
+        guard let deviceIdentifierString = call.arguments,
+              let deviceIdentifier = OcaConnectionBroker.DeviceIdentifier(deviceIdentifierString)
+        else {
+          throw Ocp1Error.status(.badFormat)
+        }
         channelManagers.withCriticalRegion { $0[deviceIdentifier] = nil }
         try await broker.disconnect(device: deviceIdentifier)
+        
       case "list":
-        return await broker.registeredDevices.map { String(describing: $0) }
+        await broker.reportRegisteredDevices()
       default:
         break
       }
