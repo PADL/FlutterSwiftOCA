@@ -118,7 +118,7 @@ public final class OcaBrokerChannelManager: Sendable {
         try await broker.disconnect(device: deviceIdentifier)
         
       case "list":
-        await broker.reportRegisteredDevices()
+        await broker.reenumerateRegisteredDevices()
       default:
         break
       }
