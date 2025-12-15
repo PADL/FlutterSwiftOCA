@@ -66,7 +66,7 @@ Sendable {
   private let connectionStateChannel: FlutterEventChannel
 
   private let identificationSensorONo: OcaONo // optional object ID of identification sensor
-  private let identifyEventChannel: FlutterEventChannel? // report identify events
+  private let identifyEventChannel: FlutterEventChannel // report identify events
 
   private final class MeteringEventSubscription: Hashable, Sendable {
     static func == (
@@ -181,14 +181,10 @@ Sendable {
     )
 
     self.identificationSensorONo = identificationSensorONo
-    if identificationSensorONo != OcaInvalidONo {
-      identifyEventChannel = FlutterEventChannel(
-        name: "\(OcaChannelPrefix)identify",
-        binaryMessenger: binaryMessenger
-      )
-    } else {
-      identifyEventChannel = nil
-    }
+    identifyEventChannel = FlutterEventChannel(
+      name: "\(OcaChannelPrefix)identify",
+      binaryMessenger: binaryMessenger
+    )
 
     try methodChannel.setMethodCallHandler(onMethod)
     try getPropertyChannel.setMethodCallHandler(onGetProperty)
@@ -209,7 +205,7 @@ Sendable {
       onListen: onConnectionStateListen,
       onCancel: onConnectionStateCancel
     )
-    try identifyEventChannel?.setStreamHandler(
+    try identifyEventChannel.setStreamHandler(
       onListen: onIdentifyEventListen,
       onCancel: onIdentifyEventCancel
     )
