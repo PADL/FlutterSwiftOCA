@@ -139,6 +139,8 @@ public final class OcaBrokerChannelManager: Sendable {
           eventTypeString = "added"
         case .deviceRemoved:
           eventTypeString = "removed"
+        case .deviceUpdated:
+          eventTypeString = "updated"
         case .connectionStateChanged:
           return nil
         }
