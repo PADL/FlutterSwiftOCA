@@ -230,6 +230,30 @@ Sendable {
     try await connection.connect()
   }
 
+  @FlutterPlatformThreadActor
+  public func dispose() throws {
+    try methodChannel.setMethodCallHandler(nil)
+    try getPropertyChannel.setMethodCallHandler(nil)
+    try setPropertyChannel.setMethodCallHandler(nil)
+    try sampleRateChannel.setMethodCallHandler(nil)
+    try datasetChannel.setMethodCallHandler(nil)
+    try datasetBlobChannel.setMethodCallHandler(nil)
+    try propertyEventChannel.setStreamHandler(onListen: nil, onCancel: nil)
+    try meteringEventChannel.setStreamHandler(onListen: nil, onCancel: nil)
+    try connectionStateChannel.setStreamHandler(onListen: nil, onCancel: nil)
+    try identifyEventChannel.setStreamHandler(onListen: nil, onCancel: nil)
+
+    subscriptions.withCriticalRegion { subscriptions in
+      for subscription in subscriptions.meteringSubscriptions.values {
+        subscription.continuation.finish()
+      }
+      subscriptions.meteringSubscriptions.removeAll()
+      subscriptions.eventSubscriptionRefs.removeAll()
+    }
+
+    logger.trace("OCA platform channels disposed (\(channelSuffix ?? "no suffix"))")
+  }
+
   private func throwingFlutterError<T>(_ block: () async throws -> T) async throws -> T {
     do {
       return try await block()

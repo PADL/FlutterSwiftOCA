@@ -114,7 +114,14 @@ public final class OcaBrokerChannelManager: Sendable {
         else {
           throw Ocp1Error.status(.badFormat)
         }
-        channelManagers.withCriticalRegion { $0[deviceIdentifier] = nil }
+        let channelManager = channelManagers.withCriticalRegion { channelManagers in
+          let manager = channelManagers[deviceIdentifier]
+          channelManagers[deviceIdentifier] = nil
+          return manager
+        }
+        try await FlutterPlatformThreadActor.run {
+          try channelManager?.dispose()
+        }
         try await broker.disconnect(device: deviceIdentifier)
         
       case "list":
