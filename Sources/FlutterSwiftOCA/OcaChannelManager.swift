@@ -542,7 +542,7 @@ Sendable {
   ) async throws -> AnyFlutterStandardCodable {
     try await throwingFlutterError {
       let target = try PropertyTarget(call.method)
-      let value = call.arguments!
+      guard let value = call.arguments else { throw Ocp1Error.status(.parameterError) }
       let object = try await target.objectID.resolve(with: connection)
 
       guard let property = await object.propertySubject(for: target.propertyID) else {
