@@ -230,6 +230,52 @@ Sendable {
     try await connection.connect()
   }
 
+  @FlutterPlatformThreadActor
+  public func dispose() throws {
+    try methodChannel
+      .setMethodCallHandler(nil as FlutterMethodCallHandler<[Data], [UInt8]>?)
+    try getPropertyChannel
+      .setMethodCallHandler(nil as FlutterMethodCallHandler<FlutterNull, AnyFlutterStandardCodable>?)
+    try setPropertyChannel
+      .setMethodCallHandler(nil as FlutterMethodCallHandler<AnyFlutterStandardCodable, AnyFlutterStandardCodable>?)
+    try sampleRateChannel
+      .setMethodCallHandler(nil as FlutterMethodCallHandler<Double, Double>?)
+    try datasetChannel
+      .setMethodCallHandler(nil as FlutterMethodCallHandler<OcaUint32, FlutterNull>?)
+    try datasetBlobChannel
+      .setMethodCallHandler(nil as FlutterMethodCallHandler<[UInt8], [UInt8]>?)
+    try propertyEventChannel
+      .setStreamHandler(
+        onListen: nil as (@Sendable (String?) async throws -> FlutterEventStream<AnyFlutterStandardCodable>)?,
+        onCancel: nil
+      )
+    try meteringEventChannel
+      .setStreamHandler(
+        onListen: nil as (@Sendable (String?) async throws -> FlutterEventStream<AnyFlutterStandardCodable>)?,
+        onCancel: nil
+      )
+    try connectionStateChannel
+      .setStreamHandler(
+        onListen: nil as (@Sendable (AnyFlutterStandardCodable?) async throws -> FlutterEventStream<Int32>)?,
+        onCancel: nil
+      )
+    try identifyEventChannel
+      .setStreamHandler(
+        onListen: nil as (@Sendable (AnyFlutterStandardCodable?) async throws -> FlutterEventStream<Bool>)?,
+        onCancel: nil
+      )
+
+    subscriptions.withCriticalRegion { subscriptions in
+      for subscription in subscriptions.meteringSubscriptions.values {
+        subscription.continuation.finish()
+      }
+      subscriptions.meteringSubscriptions.removeAll()
+      subscriptions.eventSubscriptionRefs.removeAll()
+    }
+
+    logger.trace("OCA platform channels disposed (\(channelSuffix ?? "no suffix"))")
+  }
+
   private func throwingFlutterError<T>(_ block: () async throws -> T) async throws -> T {
     do {
       return try await block()
