@@ -156,11 +156,11 @@ Sendable {
       binaryMessenger: binaryMessenger
     )
     datasetBlobChannel = FlutterMethodChannel(
-      name: "\(OcaChannelPrefix)dataset_blob",
+      name: "\(channelPrefix)dataset_blob",
       binaryMessenger: binaryMessenger
     )
     datasetChannel = FlutterMethodChannel(
-      name: "\(OcaChannelPrefix)dataset",
+      name: "\(channelPrefix)dataset",
       binaryMessenger: binaryMessenger
     )
     platformStateChannel = FlutterMethodChannel(
@@ -182,7 +182,7 @@ Sendable {
 
     self.identificationSensorONo = identificationSensorONo
     identifyEventChannel = FlutterEventChannel(
-      name: "\(OcaChannelPrefix)identify",
+      name: "\(channelPrefix)identify",
       binaryMessenger: binaryMessenger
     )
 
