@@ -482,11 +482,11 @@ Sendable {
       switch target.method {
       case .fetch:
         return try await Array(object.fetchCurrentParameterData())
-      case .store:
+      case .apply:
         guard let arguments = call.arguments else { throw Ocp1Error.status(.parameterError) }
         try await object.apply(parameterData: OcaLongBlob(arguments))
         return []
-      default:
+      case .store:
         throw Ocp1Error.status(.badMethod)
       }
     }
