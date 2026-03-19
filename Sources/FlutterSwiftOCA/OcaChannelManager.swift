@@ -675,8 +675,8 @@ Sendable {
       let cancellable = try await connection.addSubscription(
         label: OcaMeteringSubscriptionLabel,
         event: target.propertyChangedEvent,
-        callback: { [self] event, eventData in
-          try onMeteringEvent(
+        callback: { [weak self] event, eventData in
+          try self?.onMeteringEvent(
             target: target,
             event: event,
             eventData: eventData
@@ -693,16 +693,15 @@ Sendable {
           continuation: continuation
         )
 
-        continuation.onTermination = { @Sendable [self] _ in
-          subscriptions.withCriticalRegion { subscriptions in
+        let cancellableToRemove = subscription.cancellable
+        continuation.onTermination = { @Sendable [weak self] _ in
+          self?.subscriptions.withCriticalRegion { subscriptions in
             subscriptions.meteringSubscriptions[target] = nil
           }
-          Task {
-            // subscriptions are ref-counted by SwiftOCA so removing this
-            // subscription should not race with another re-subscription
-            try await connection.removeSubscription(subscription.cancellable)
+          Task { [weak self] in
+            try await self?.connection.removeSubscription(cancellableToRemove)
           }
-          logger.trace("unsubscribed metering events from \(target)")
+          self?.logger.trace("unsubscribed metering events from \(target)")
         }
         subscriptions.withCriticalRegion { subscriptions in
           subscriptions.meteringSubscriptions[target] = subscription
