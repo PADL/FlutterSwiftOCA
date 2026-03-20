@@ -773,11 +773,12 @@ extension OcaPropertySubjectRepresentable {
   func eraseToFlutterEventStream(object: OcaRoot, logger: Logger)
     -> FlutterEventStream<AnyFlutterStandardCodable>
   {
-    subject.compactMap { value in
+    let propertyDescription = propertyIDs.first?.description ?? "unknown"
+    return subject.compactMap { value in
       guard case let .success(value) = value else {
         logger
           .trace(
-            "received property event object \(object) ID \(self.propertyIDs.first?.description ?? "unknown") no value"
+            "received property event object \(object) ID \(propertyDescription) no value"
           )
         return nil // this will be ignored by compactMap
       }
@@ -785,7 +786,7 @@ extension OcaPropertySubjectRepresentable {
       if let any, !(object is OcaSensor) {
         logger
           .trace(
-            "received property event object \(object) ID \(self.propertyIDs.first?.description ?? "unknown") value \(String(describing: value)) => \(any)"
+            "received property event object \(object) ID \(propertyDescription) value \(String(describing: value)) => \(any)"
           )
       }
       return any
