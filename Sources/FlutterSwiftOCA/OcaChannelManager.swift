@@ -652,7 +652,7 @@ Sendable {
     eventData data: Data
   ) throws {
     // FIXME: assumes all metering information is OcaDB
-    let eventData = try OcaPropertyChangedEventData<OcaDB>(bytes: Array(data))
+    let eventData = try OcaPropertyChangedEventData<OcaDB>(bytes: data)
 
     guard eventData.propertyID == target.propertyID,
           eventData.changeType == .currentChanged,
