@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+#if canImport(Darwin) || canImport(dnssd)
+
 import AsyncAlgorithms
 import AsyncExtensions
 @_spi(FlutterSwiftPrivate)
@@ -179,3 +181,5 @@ public final class OcaBrokerChannelManager: Sendable {
     }
   }
 }
+
+#endif
