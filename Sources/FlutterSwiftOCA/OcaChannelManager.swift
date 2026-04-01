@@ -20,6 +20,7 @@ import AsyncAlgorithms
 import FlutterSwift
 import Foundation
 import Logging
+import Synchronization
 @_spi(SwiftOCAPrivate)
 import SwiftOCA
 
@@ -99,7 +100,7 @@ Sendable {
     var meteringSubscriptions = [PropertyTarget: MeteringEventSubscription]()
   }
 
-  private let subscriptions: ManagedCriticalState<EventSubscriptions>
+  private let subscriptions: Mutex<EventSubscriptions>
 
   private static func _makeChannelPrefix(with channelSuffix: String?) -> String {
     if let channelSuffix {
@@ -136,7 +137,7 @@ Sendable {
     self.logger = logger
     self.flags = flags
     self.channelSuffix = channelSuffix
-    subscriptions = ManagedCriticalState(EventSubscriptions())
+    subscriptions = Mutex(EventSubscriptions())
     let channelPrefix = Self._makeChannelPrefix(with: channelSuffix)
 
     methodChannel = FlutterMethodChannel(
@@ -265,7 +266,7 @@ Sendable {
         onCancel: nil
       )
 
-    subscriptions.withCriticalRegion { subscriptions in
+    subscriptions.withLock { subscriptions in
       for subscription in subscriptions.meteringSubscriptions.values {
         subscription.continuation.finish()
       }
@@ -569,7 +570,7 @@ Sendable {
 
   @discardableResult
   private func addEventSubscriptionRef(_ oNo: OcaONo) -> Int { // returns old ref count
-    subscriptions.withCriticalRegion { subscriptions in
+    subscriptions.withLock { subscriptions in
       let refCount = subscriptions.eventSubscriptionRefs[oNo] ?? 0
       subscriptions.eventSubscriptionRefs[oNo] = refCount + 1
       return refCount
@@ -578,7 +579,7 @@ Sendable {
 
   @discardableResult
   private func removeEventSubscriptionRef(_ oNo: OcaONo) throws -> Int { // returns new ref count
-    try subscriptions.withCriticalRegion { subscriptions in
+    try subscriptions.withLock { subscriptions in
       guard var refCount = subscriptions.eventSubscriptionRefs[oNo] else {
         throw Ocp1Error.notSubscribedToEvent
       }
@@ -656,7 +657,7 @@ Sendable {
 
     guard eventData.propertyID == target.propertyID,
           eventData.changeType == .currentChanged,
-          let subscription = subscriptions.withCriticalRegion({ subscriptions in
+          let subscription = subscriptions.withLock({ subscriptions in
             subscriptions.meteringSubscriptions[target]
           })
     else {
@@ -695,7 +696,7 @@ Sendable {
 
         let cancellableToRemove = subscription.cancellable
         continuation.onTermination = { @Sendable [weak self] _ in
-          self?.subscriptions.withCriticalRegion { subscriptions in
+          self?.subscriptions.withLock { subscriptions in
             subscriptions.meteringSubscriptions[target] = nil
           }
           Task { [weak self] in
@@ -703,7 +704,7 @@ Sendable {
           }
           self?.logger.trace("unsubscribed metering events from \(target)")
         }
-        subscriptions.withCriticalRegion { subscriptions in
+        subscriptions.withLock { subscriptions in
           subscriptions.meteringSubscriptions[target] = subscription
         }
 
@@ -720,7 +721,7 @@ Sendable {
   private func onMeteringEventCancel(_ target: String?) async throws {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
-      let subscription = subscriptions.withCriticalRegion { subscriptions in
+      let subscription = subscriptions.withLock { subscriptions in
         subscriptions.meteringSubscriptions[target]
       }
 

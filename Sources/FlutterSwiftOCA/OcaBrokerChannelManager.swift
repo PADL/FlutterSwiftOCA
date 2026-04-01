@@ -22,6 +22,7 @@ import AsyncExtensions
 import FlutterSwift
 import Foundation
 import Logging
+import Synchronization
 @_spi(SwiftOCAPrivate)
 import SwiftOCA
 
@@ -38,7 +39,7 @@ public final class OcaBrokerChannelManager: Sendable {
   private let eventChannel: FlutterEventChannel
   private let controlChannel: FlutterMethodChannel
   private let channelManagers =
-    ManagedCriticalState<[OcaConnectionBroker.DeviceIdentifier: OcaChannelManager]>([:])
+    Mutex<[OcaConnectionBroker.DeviceIdentifier: OcaChannelManager]>([:])
 
   public typealias OnConnectionCallback = @Sendable (
     OcaConnectionBroker.DeviceIdentifier,
@@ -108,7 +109,7 @@ public final class OcaBrokerChannelManager: Sendable {
             channelSuffix: String(describing: deviceIdentifier)
           )
         }
-        channelManagers.withCriticalRegion { $0[deviceIdentifier] = channelManager }
+        channelManagers.withLock { $0[deviceIdentifier] = channelManager }
         
       case "disconnect":
         guard let deviceIdentifierString = call.arguments,
@@ -116,7 +117,7 @@ public final class OcaBrokerChannelManager: Sendable {
         else {
           throw Ocp1Error.status(.badFormat)
         }
-        let channelManager = channelManagers.withCriticalRegion { channelManagers in
+        let channelManager = channelManagers.withLock { channelManagers in
           let manager = channelManagers[deviceIdentifier]
           channelManagers[deviceIdentifier] = nil
           return manager
