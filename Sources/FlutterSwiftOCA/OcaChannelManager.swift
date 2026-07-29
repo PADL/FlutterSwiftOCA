@@ -266,12 +266,20 @@ Sendable {
         onCancel: nil
       )
 
-    subscriptions.withLock { subscriptions in
-      for subscription in subscriptions.meteringSubscriptions.values {
-        subscription.continuation.finish()
-      }
+    // `finish()` invokes the continuation's `onTermination` handler
+    // synchronously on this thread, and that handler takes the `subscriptions`
+    // lock to deregister itself. `Mutex` is not recursive, so finishing while
+    // holding the lock deadlocks the platform thread. Drain the registry under
+    // the lock, then finish outside it.
+    let meteringSubscriptions = subscriptions.withLock { subscriptions in
+      let subscriptionsToFinish = Array(subscriptions.meteringSubscriptions.values)
       subscriptions.meteringSubscriptions.removeAll()
       subscriptions.eventSubscriptionRefs.removeAll()
+      return subscriptionsToFinish
+    }
+
+    for subscription in meteringSubscriptions {
+      subscription.continuation.finish()
     }
 
     logger.trace("OCA platform channels disposed (\(channelSuffix ?? "no suffix"))")
