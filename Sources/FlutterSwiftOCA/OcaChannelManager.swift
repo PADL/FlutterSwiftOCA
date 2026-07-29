@@ -647,71 +647,66 @@ Sendable {
   }
 
   @Sendable
-  private func onMeteringEvent(
-    target: PropertyTarget,
-    event: OcaEvent,
-    eventData data: Data
-  ) throws {
-    // FIXME: assumes all metering information is OcaDB
-    let eventData = try OcaPropertyChangedEventData<OcaDB>(bytes: data)
-
-    guard eventData.propertyID == target.propertyID,
-          eventData.changeType == .currentChanged,
-          let subscription = subscriptions.withLock({ subscriptions in
-            subscriptions.meteringSubscriptions[target]
-          })
-    else {
-      return
-    }
-
-    try subscription.continuation.yield(eventData.propertyValue.bridgeToAnyFlutterStandardCodable())
-  }
-
-  @Sendable
   private func onMeteringEventListen(_ target: String?) async throws
     -> FlutterEventStream<AnyFlutterStandardCodable>
   {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
+
+      // Build the stream first, so the continuation exists before the
+      // subscription that feeds it. Creating it inside `AsyncStream`'s
+      // initializer publishes it only after `addSubscription` already needed
+      // it, which is why the callback used to reach it by looking `target` up
+      // in `meteringSubscriptions`: a mutex acquisition and a `PropertyTarget`
+      // hash on every sample (~37ns), on the connection's receive path. That
+      // mutex is shared with `eventSubscriptionRefs`, so metering also
+      // serialised against property event subscribe/unsubscribe.
+      //
+      // Delivery is unchanged: same buffering policy, one message per sample,
+      // nothing coalesced or held back.
+      let (stream, continuation) = AsyncStream.makeStream(
+        of: AnyFlutterStandardCodable?.self,
+        bufferingPolicy: .bufferingNewest(1)
+      )
+
+      let propertyID = target.propertyID
       let cancellable = try await connection.addSubscription(
         label: OcaMeteringSubscriptionLabel,
         event: target.propertyChangedEvent,
-        callback: { [weak self] event, eventData in
-          try self?.onMeteringEvent(
-            target: target,
-            event: event,
-            eventData: eventData
-          )
+        callback: { _, eventData in
+          // FIXME: assumes all metering information is OcaDB
+          let eventData = try OcaPropertyChangedEventData<OcaDB>(bytes: eventData)
+          guard eventData.propertyID == propertyID,
+                eventData.changeType == .currentChanged
+          else { return }
+          // `OcaDB` is `Float`, whose `bridgeToAnyFlutterStandardCodable()` is
+          // exactly this; constructing it directly skips the existential.
+          continuation.yield(.float64(Double(eventData.propertyValue)))
         }
       )
 
-      let stream = AsyncStream<AnyFlutterStandardCodable?>(
-        AnyFlutterStandardCodable?.self,
-        bufferingPolicy: .bufferingNewest(1)
-      ) { continuation in
-        let subscription = MeteringEventSubscription(
+      continuation.onTermination = { @Sendable [weak self] _ in
+        self?.subscriptions.withLock { subscriptions in
+          subscriptions.meteringSubscriptions[target] = nil
+        }
+        Task { [weak self] in
+          try await self?.connection.removeSubscription(cancellable)
+        }
+        self?.logger.trace("unsubscribed metering events from \(target)")
+      }
+
+      // Still registered, but only for the cancel and dispose paths now —
+      // never per sample.
+      subscriptions.withLock { subscriptions in
+        subscriptions.meteringSubscriptions[target] = MeteringEventSubscription(
           cancellable: cancellable,
           continuation: continuation
         )
-
-        let cancellableToRemove = subscription.cancellable
-        continuation.onTermination = { @Sendable [weak self] _ in
-          self?.subscriptions.withLock { subscriptions in
-            subscriptions.meteringSubscriptions[target] = nil
-          }
-          Task { [weak self] in
-            try await self?.connection.removeSubscription(cancellableToRemove)
-          }
-          self?.logger.trace("unsubscribed metering events from \(target)")
-        }
-        subscriptions.withLock { subscriptions in
-          subscriptions.meteringSubscriptions[target] = subscription
-        }
-
-        logger.trace(
-          "subscribed metering events for \(target)"
-        )
       }
+
+      logger.trace(
+        "subscribed metering events for \(target)"
+      )
 
       return stream.eraseToAnyAsyncSequence()
     }
