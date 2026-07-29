@@ -67,28 +67,16 @@ Sendable {
   private let identificationSensorONo: OcaONo // optional object ID of identification sensor
   private let identifyEventChannel: FlutterEventChannel // report identify events
 
-  private final class MeteringEventSubscription: Hashable, Sendable {
-    static func == (
-      lhs: OcaChannelManager.MeteringEventSubscription,
-      rhs: OcaChannelManager.MeteringEventSubscription
-    ) -> Bool {
-      lhs.cancellable == rhs.cancellable
-    }
-
+  /// A registered metering stream.
+  ///
+  /// A class so that a terminating subscription can ask whether the registry
+  /// entry for its target is still its own, by identity.
+  private final class MeteringEventSubscription: Sendable {
     typealias Continuation = AsyncStream<AnyFlutterStandardCodable?>.Continuation
 
-    let cancellable: Ocp1Connection.SubscriptionCancellable
     let continuation: Continuation
 
-    func hash(into hasher: inout Hasher) {
-      cancellable.hash(into: &hasher)
-    }
-
-    init(
-      cancellable: Ocp1Connection.SubscriptionCancellable,
-      continuation: Continuation
-    ) {
-      self.cancellable = cancellable
+    init(continuation: Continuation) {
       self.continuation = continuation
     }
   }
@@ -234,9 +222,15 @@ Sendable {
     try methodChannel
       .setMethodCallHandler(nil as FlutterMethodCallHandler<[Data], [UInt8]>?)
     try getPropertyChannel
-      .setMethodCallHandler(nil as FlutterMethodCallHandler<FlutterNull, AnyFlutterStandardCodable>?)
+      .setMethodCallHandler(nil as FlutterMethodCallHandler<
+        FlutterNull,
+        AnyFlutterStandardCodable
+      >?)
     try setPropertyChannel
-      .setMethodCallHandler(nil as FlutterMethodCallHandler<AnyFlutterStandardCodable, AnyFlutterStandardCodable>?)
+      .setMethodCallHandler(nil as FlutterMethodCallHandler<
+        AnyFlutterStandardCodable,
+        AnyFlutterStandardCodable
+      >?)
     try sampleRateChannel
       .setMethodCallHandler(nil as FlutterMethodCallHandler<Double, Double>?)
     try datasetChannel
@@ -245,22 +239,26 @@ Sendable {
       .setMethodCallHandler(nil as FlutterMethodCallHandler<[UInt8], [UInt8]>?)
     try propertyEventChannel
       .setStreamHandler(
-        onListen: nil as (@Sendable (String?) async throws -> FlutterEventStream<AnyFlutterStandardCodable>)?,
+        onListen: nil as (@Sendable (String?) async throws
+          -> FlutterEventStream<AnyFlutterStandardCodable>)?,
         onCancel: nil
       )
     try meteringEventChannel
       .setStreamHandler(
-        onListen: nil as (@Sendable (String?) async throws -> FlutterEventStream<AnyFlutterStandardCodable>)?,
+        onListen: nil as (@Sendable (String?) async throws
+          -> FlutterEventStream<AnyFlutterStandardCodable>)?,
         onCancel: nil
       )
     try connectionStateChannel
       .setStreamHandler(
-        onListen: nil as (@Sendable (AnyFlutterStandardCodable?) async throws -> FlutterEventStream<Int32>)?,
+        onListen: nil as (@Sendable (AnyFlutterStandardCodable?) async throws
+          -> FlutterEventStream<Int32>)?,
         onCancel: nil
       )
     try identifyEventChannel
       .setStreamHandler(
-        onListen: nil as (@Sendable (AnyFlutterStandardCodable?) async throws -> FlutterEventStream<Bool>)?,
+        onListen: nil as (@Sendable (AnyFlutterStandardCodable?) async throws
+          -> FlutterEventStream<Bool>)?,
         onCancel: nil
       )
 
@@ -296,7 +294,7 @@ Sendable {
     }
   }
 
-  // we allow objects of both known and unknown class to be addressed over channels
+  /// we allow objects of both known and unknown class to be addressed over channels
   private enum ObjectIdentification: CustomStringConvertible {
     /// object number in hex with no leading 0x
     case oNo(OcaONo)
@@ -653,86 +651,65 @@ Sendable {
   }
 
   @Sendable
-  private func onMeteringEvent(
-    target: PropertyTarget,
-    event: OcaEvent,
-    eventData data: Data
-  ) throws {
-    // FIXME: assumes all metering information is OcaDB
-    let eventData = try OcaPropertyChangedEventData<OcaDB>(bytes: data)
-
-    guard eventData.propertyID == target.propertyID,
-          eventData.changeType == .currentChanged,
-          let subscription = subscriptions.withLock({ subscriptions in
-            subscriptions.meteringSubscriptions[target]
-          })
-    else {
-      return
-    }
-
-    try subscription.continuation.yield(eventData.propertyValue.bridgeToAnyFlutterStandardCodable())
-  }
-
-  @Sendable
   private func onMeteringEventListen(_ target: String?) async throws
     -> FlutterEventStream<AnyFlutterStandardCodable>
   {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
+
+      // Built before the subscription so the event callback can capture the
+      // continuation, rather than recovering it per sample by looking `target`
+      // up under the `subscriptions` lock.
+      let (stream, continuation) = AsyncStream.makeStream(
+        of: AnyFlutterStandardCodable?.self,
+        bufferingPolicy: .bufferingNewest(1)
+      )
+      let subscription = MeteringEventSubscription(continuation: continuation)
+      let propertyID = target.propertyID
+
       // Deliberately unlabelled. `SubscriptionCancellable` compares labelled
       // cancellables by (label, event) and unlabelled ones by identity, and
       // `propertyChangedEvent` keys only on the object number — so a shared
       // constant label made every metering subscription on one object equal.
-      // Two consequences: a second metered property on that object could not
-      // subscribe at all, and re-listening on the same target (route pop/push,
-      // hot reload) raced the previous subscription's asynchronous removal and
-      // threw `alreadySubscribedToEvent`. Identity comparison makes each
-      // subscription distinct, which is what the lifecycle here assumes.
       let cancellable = try await connection.addSubscription(
         event: target.propertyChangedEvent,
-        callback: { [weak self] event, eventData in
-          try self?.onMeteringEvent(
-            target: target,
-            event: event,
-            eventData: eventData
-          )
+        callback: { [weak self] _, eventData in
+          // Go inert once the manager is released, as dispatching through
+          // `self?.onMeteringEvent(...)` used to.
+          guard self != nil else { return }
+          // FIXME: assumes all metering information is OcaDB
+          let eventData = try OcaPropertyChangedEventData<OcaDB>(bytes: eventData)
+          guard eventData.propertyID == propertyID,
+                eventData.changeType == .currentChanged
+          else { return }
+          // `OcaDB` is `Float`, whose `bridgeToAnyFlutterStandardCodable()` is
+          // defined as exactly this.
+          continuation.yield(.float64(Double(eventData.propertyValue)))
         }
       )
 
-      let stream = AsyncStream<AnyFlutterStandardCodable?>(
-        AnyFlutterStandardCodable?.self,
-        bufferingPolicy: .bufferingNewest(1)
-      ) { continuation in
-        let subscription = MeteringEventSubscription(
-          cancellable: cancellable,
-          continuation: continuation
-        )
-
-        let cancellableToRemove = subscription.cancellable
-        continuation.onTermination = { @Sendable [weak self] _ in
-          // Deregister only if this subscription is still the registered one.
-          // A termination can be delivered after a replacement has already
-          // registered for the same target, and clearing unconditionally would
-          // orphan the replacement: nothing could then find its continuation
-          // to finish it, so its OCA subscription would never be removed.
-          self?.subscriptions.withLock { subscriptions in
-            if subscriptions.meteringSubscriptions[target] === subscription {
-              subscriptions.meteringSubscriptions[target] = nil
-            }
+      continuation.onTermination = { @Sendable [weak self] _ in
+        // Deregister only if this subscription is still the registered one; a
+        // termination can arrive after a replacement has registered for the
+        // same target, and clearing unconditionally would orphan it.
+        self?.subscriptions.withLock { subscriptions in
+          if subscriptions.meteringSubscriptions[target] === subscription {
+            subscriptions.meteringSubscriptions[target] = nil
           }
-          Task { [weak self] in
-            try await self?.connection.removeSubscription(cancellableToRemove)
-          }
-          self?.logger.trace("unsubscribed metering events from \(target)")
         }
-        subscriptions.withLock { subscriptions in
-          subscriptions.meteringSubscriptions[target] = subscription
+        Task { [weak self] in
+          try await self?.connection.removeSubscription(cancellable)
         }
-
-        logger.trace(
-          "subscribed metering events for \(target)"
-        )
+        self?.logger.trace("unsubscribed metering events from \(target)")
       }
+
+      subscriptions.withLock { subscriptions in
+        subscriptions.meteringSubscriptions[target] = subscription
+      }
+
+      logger.trace(
+        "subscribed metering events for \(target)"
+      )
 
       return stream.eraseToAnyAsyncSequence()
     }
