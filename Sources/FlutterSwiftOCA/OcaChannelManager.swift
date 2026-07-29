@@ -27,8 +27,6 @@ import SwiftOCA
 public let OcaChannelPrefix = "oca/"
 public let OcaPlatformStateReadyMethodName = "platform_ready"
 
-private let OcaMeteringSubscriptionLabel = "com.padl.FlutterSwiftOCA.metering"
-
 private extension OcaONo {
   var oNoString: String {
     "<\(String(self, radix: 16))>"
@@ -681,8 +679,16 @@ Sendable {
   {
     try await throwingFlutterError {
       let target = try PropertyTarget(target!)
+      // Deliberately unlabelled. `SubscriptionCancellable` compares labelled
+      // cancellables by (label, event) and unlabelled ones by identity, and
+      // `propertyChangedEvent` keys only on the object number — so a shared
+      // constant label made every metering subscription on one object equal.
+      // Two consequences: a second metered property on that object could not
+      // subscribe at all, and re-listening on the same target (route pop/push,
+      // hot reload) raced the previous subscription's asynchronous removal and
+      // threw `alreadySubscribedToEvent`. Identity comparison makes each
+      // subscription distinct, which is what the lifecycle here assumes.
       let cancellable = try await connection.addSubscription(
-        label: OcaMeteringSubscriptionLabel,
         event: target.propertyChangedEvent,
         callback: { [weak self] event, eventData in
           try self?.onMeteringEvent(
