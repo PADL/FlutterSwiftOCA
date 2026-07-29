@@ -710,8 +710,15 @@ Sendable {
 
         let cancellableToRemove = subscription.cancellable
         continuation.onTermination = { @Sendable [weak self] _ in
+          // Deregister only if this subscription is still the registered one.
+          // A termination can be delivered after a replacement has already
+          // registered for the same target, and clearing unconditionally would
+          // orphan the replacement: nothing could then find its continuation
+          // to finish it, so its OCA subscription would never be removed.
           self?.subscriptions.withLock { subscriptions in
-            subscriptions.meteringSubscriptions[target] = nil
+            if subscriptions.meteringSubscriptions[target] === subscription {
+              subscriptions.meteringSubscriptions[target] = nil
+            }
           }
           Task { [weak self] in
             try await self?.connection.removeSubscription(cancellableToRemove)
