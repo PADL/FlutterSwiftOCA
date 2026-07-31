@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
-#if canImport(Darwin) || canImport(dnssd)
+// NB: must match the availability of OcaConnectionBroker in SwiftOCA, which
+// now includes Android via NsdManager.
+#if canImport(Darwin) || canImport(dnssd) || os(Android)
 
 import AsyncAlgorithms
 import AsyncExtensions
