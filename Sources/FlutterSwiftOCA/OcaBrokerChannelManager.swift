@@ -48,6 +48,7 @@ public final class OcaBrokerChannelManager: Sendable {
   /// bindings across the cycle, and disposing them would tear down the channels
   /// the UI is still holding.
   private let suspendedDevices = Mutex<[OcaConnectionBroker.DeviceIdentifier]>([])
+  private let lifecycleGeneration = Atomic<UInt64>(0)
 
   public typealias OnConnectionCallback = @Sendable (
     OcaConnectionBroker.DeviceIdentifier,
@@ -109,19 +110,34 @@ public final class OcaBrokerChannelManager: Sendable {
     try controlChannel.setMethodCallHandler(onControl)
   }
 
+  /// Distinguishes successive suspend/resume transitions: both walk their
+  /// devices an await at a time, so a quick bounce can interleave them.
+  private func _beginLifecycleTransition() -> UInt64 {
+    lifecycleGeneration.wrappingAdd(1, ordering: .relaxed).newValue
+  }
+
+  private func _isCurrentLifecycleTransition(_ generation: UInt64) -> Bool {
+    lifecycleGeneration.load(ordering: .relaxed) == generation
+  }
+
   /// Disconnects every connected device, remembering them for ``resume()``.
   ///
   /// For app suspension: mobile platforms expect network resources to be
   /// released while the app is not in use. Channel managers are left registered
   /// so that Dart's bindings survive the cycle.
   public func suspend() async {
+    let generation = _beginLifecycleTransition()
     let devices = channelManagers.withLock { Array($0.keys) }
     guard !devices.isEmpty else { return }
 
+    // Recorded before disconnecting: a resume() arriving mid-loop would
+    // otherwise find nothing to restore and leave the devices down.
+    suspendedDevices.withLock { $0 = devices }
+
     for device in devices {
+      guard _isCurrentLifecycleTransition(generation) else { return }
       try? await broker.disconnect(device: device)
     }
-    suspendedDevices.withLock { $0 = devices }
     logger.debug("suspended \(devices.count) device(s)")
   }
 
@@ -131,12 +147,14 @@ public final class OcaBrokerChannelManager: Sendable {
   /// event subscriptions -- including metering -- so nothing is re-subscribed
   /// by hand here.
   public func resume() async {
+    let generation = _beginLifecycleTransition()
     let devices = suspendedDevices.withLock { devices -> [OcaConnectionBroker.DeviceIdentifier] in
       defer { devices = [] }
       return devices
     }
 
     for device in devices {
+      guard _isCurrentLifecycleTransition(generation) else { return }
       do {
         try await broker.connect(device: device)
         try await broker.withDeviceConnection(device) { connection in
