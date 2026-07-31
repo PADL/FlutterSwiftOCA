@@ -42,6 +42,12 @@ public final class OcaBrokerChannelManager: Sendable {
   private let controlChannel: FlutterMethodChannel
   private let channelManagers =
     Mutex<[OcaConnectionBroker.DeviceIdentifier: OcaChannelManager]>([:])
+  /// Devices disconnected by `suspend`, to be reconnected by `resume`.
+  ///
+  /// Their `OcaChannelManager`s are deliberately left in place: Dart keeps its
+  /// bindings across the cycle, and disposing them would tear down the channels
+  /// the UI is still holding.
+  private let suspendedDevices = Mutex<[OcaConnectionBroker.DeviceIdentifier]>([])
 
   public typealias OnConnectionCallback = @Sendable (
     OcaConnectionBroker.DeviceIdentifier,
@@ -101,6 +107,47 @@ public final class OcaBrokerChannelManager: Sendable {
 
     try eventChannel.allowChannelBufferOverflow(true)
     try controlChannel.setMethodCallHandler(onControl)
+  }
+
+  /// Disconnects every connected device, remembering them for ``resume()``.
+  ///
+  /// For app suspension: mobile platforms expect network resources to be
+  /// released while the app is not in use. Channel managers are left registered
+  /// so that Dart's bindings survive the cycle.
+  public func suspend() async {
+    let devices = channelManagers.withLock { Array($0.keys) }
+    guard !devices.isEmpty else { return }
+
+    for device in devices {
+      try? await broker.disconnect(device: device)
+    }
+    suspendedDevices.withLock { $0 = devices }
+    logger.debug("suspended \(devices.count) device(s)")
+  }
+
+  /// Reconnects whatever ``suspend()`` disconnected.
+  ///
+  /// The connection's own `refreshSubscriptionsOnReconnection` is what restores
+  /// event subscriptions -- including metering -- so nothing is re-subscribed
+  /// by hand here.
+  public func resume() async {
+    let devices = suspendedDevices.withLock { devices -> [OcaConnectionBroker.DeviceIdentifier] in
+      defer { devices = [] }
+      return devices
+    }
+
+    for device in devices {
+      do {
+        try await broker.connect(device: device)
+        try await broker.withDeviceConnection(device) { connection in
+          try await onConnectionCallback?(device, connection)
+        }
+      } catch {
+        // A device that went away while suspended is not an error: the browser
+        // will report it again if it comes back.
+        logger.info("failed to resume \(device): \(error)")
+      }
+    }
   }
 
   @Sendable @FlutterPlatformThreadActor
