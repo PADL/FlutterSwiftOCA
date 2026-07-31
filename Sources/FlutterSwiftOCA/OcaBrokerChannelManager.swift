@@ -47,7 +47,18 @@ public final class OcaBrokerChannelManager: Sendable {
   ) async throws -> ()
 
   private let onConnectionCallback: OnConnectionCallback?
+  private let propertyEventChannelBufferSize: Int
+  private let identificationSensorONo: OcaONo
 
+  /// - Parameters:
+  ///   - serviceTypes: the advertised service types to browse, or `nil` to browse all of them.
+  ///   - deviceModels: restricts discovery to devices advertising one of these model GUIDs, or
+  ///     `nil` to surface every device on the network. Applications that only know how to talk to
+  ///     their own hardware should pass their model GUID here, so that foreign devices are never
+  ///     forwarded to Dart.
+  ///   - identificationSensorONo: forwarded to the per-device ``OcaChannelManager`` created on
+  ///     connection, so that a device reached through the browser supports identification just as
+  ///     one connected directly does.
   @FlutterPlatformThreadActor
   public init(
     connectionOptions: Ocp1ConnectionOptions,
@@ -55,9 +66,18 @@ public final class OcaBrokerChannelManager: Sendable {
     logger: Logger,
     flags: OcaChannelManager.Flags = [],
     propertyEventChannelBufferSize: Int = 10,
+    identificationSensorONo: OcaONo = OcaInvalidONo,
+    serviceTypes: Set<OcaNetworkAdvertisingServiceType>? = nil,
+    deviceModels: [OcaModelGUID]? = nil,
     onConnectionCallback: OnConnectionCallback? = nil
   ) async throws {
-    broker = await OcaConnectionBroker(connectionOptions: connectionOptions)
+    self.propertyEventChannelBufferSize = propertyEventChannelBufferSize
+    self.identificationSensorONo = identificationSensorONo
+    broker = await OcaConnectionBroker(
+      connectionOptions: connectionOptions,
+      serviceTypes: serviceTypes,
+      deviceModels: deviceModels
+    )
     self.binaryMessenger = binaryMessenger
     self.logger = logger
     self.flags = flags
@@ -106,7 +126,9 @@ public final class OcaBrokerChannelManager: Sendable {
             binaryMessenger: binaryMessenger,
             logger: logger,
             flags: flags,
-            channelSuffix: String(describing: deviceIdentifier)
+            propertyEventChannelBufferSize: propertyEventChannelBufferSize,
+            channelSuffix: String(describing: deviceIdentifier),
+            identificationSensorONo: identificationSensorONo
           )
         }
         channelManagers.withLock { $0[deviceIdentifier] = channelManager }
