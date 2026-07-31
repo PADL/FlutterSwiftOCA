@@ -163,7 +163,12 @@ public final class OcaBrokerChannelManager: Sendable {
         else {
           throw Ocp1Error.status(.badFormat)
         }
-        try await broker.connect(device: deviceIdentifier)
+        // open() registers the connection without connecting it, so that the
+        // channels below — and Flutter's subscription to them — are in place
+        // first. The connection state stream carries transitions only, so a
+        // connection that completes before Flutter has subscribed is never
+        // reported to it.
+        try await broker.open(device: deviceIdentifier)
         let connection = try await broker.withDeviceConnection(deviceIdentifier) { connection in
           try await onConnectionCallback?(deviceIdentifier, connection)
           return connection
@@ -181,7 +186,8 @@ public final class OcaBrokerChannelManager: Sendable {
           )
         }
         channelManagers.withLock { $0[deviceIdentifier] = channelManager }
-        
+        try await broker.connect(device: deviceIdentifier)
+
       case "disconnect":
         guard let deviceIdentifierString = call.arguments,
               let deviceIdentifier = OcaConnectionBroker.DeviceIdentifier(deviceIdentifierString)
