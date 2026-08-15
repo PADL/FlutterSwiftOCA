@@ -523,17 +523,9 @@ Sendable {
     }
   }
 
-  // Under `NonisolatedNonsendingByDefault` these two run inline on the platform
-  // thread rather than the cooperative pool. The trigger is FlutterSwift enabling
-  // it, not this package: it declares `FlutterMethodCallHandler`, and a function
-  // type's isolation is fixed where it is declared. That is safe — everything
-  // else awaits into SwiftOCA, which stays off this thread either way, leaving
-  // only the `AnyFlutterStandardCodable` bridge. The bridge is cheap except for
-  // composite values, which round trip through JSON per element; in inferno_ui
-  // that is just `supportedRates` and `systemInterfaces`, read on connect and on
-  // operation mode changes. Property events and metering bridge inside the event
-  // channel's stream, which the feature leaves on the pool. Mark these
-  // `@concurrent` if a large composite value ever lands on a hot path.
+  // Enabling `NonisolatedNonsendingByDefault` here — FlutterSwift alone is not
+  // enough — would run these on the platform thread, and with them the
+  // `AnyFlutterStandardCodable` bridge's JSON round trip per composite element.
   @Sendable
   private func onGetProperty(
     call: FlutterMethodCall<FlutterNull>
