@@ -204,13 +204,11 @@ Sendable {
 
     logger.trace("OCA platform channels ready (\(channelSuffix ?? "no suffix"))")
 
-    Task {
-      // let Flutter code know it is safe to subsribe to the channels above
-      try await platformStateChannel.invoke(
-        method: OcaPlatformStateReadyMethodName,
-        arguments: true
-      )
-    }
+    // let Flutter code know it is safe to subsribe to the channels above
+    try platformStateChannel.invoke(
+      method: OcaPlatformStateReadyMethodName,
+      arguments: true
+    )
   }
 
   public func connect() async throws {
