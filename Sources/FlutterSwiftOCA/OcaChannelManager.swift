@@ -34,10 +34,10 @@ private extension OcaONo {
 }
 
 private extension OcaRoot {
-  func propertySubject(for propertyID: OcaPropertyID) async
+  func propertySubject(for propertyID: OcaPropertyID)
     -> (any OcaPropertySubjectRepresentable)?
   {
-    guard let keyPath = await propertyKeyPath(for: propertyID) else { return nil }
+    guard let keyPath = propertyKeyPath(for: propertyID) else { return nil }
     return self[keyPath: keyPath] as! any OcaPropertySubjectRepresentable
   }
 }
@@ -532,7 +532,7 @@ Sendable {
       let target = try PropertyTarget(call.method)
       let object = try await target.objectID.resolve(with: connection)
 
-      guard let property = await object.propertySubject(for: target.propertyID) else {
+      guard let property = object.propertySubject(for: target.propertyID) else {
         logger.error("could not locate property \(target.propertyID) on \(object)")
         throw Ocp1Error.status(.processingFailed)
       }
@@ -551,7 +551,7 @@ Sendable {
       guard let value = call.arguments else { throw Ocp1Error.status(.parameterError) }
       let object = try await target.objectID.resolve(with: connection)
 
-      guard let property = await object.propertySubject(for: target.propertyID) else {
+      guard let property = object.propertySubject(for: target.propertyID) else {
         logger.error("could not locate property \(target.propertyID) on \(object)")
         throw Ocp1Error.status(.processingFailed)
       }
@@ -610,7 +610,7 @@ Sendable {
       let target = try PropertyTarget(target!)
       let object = try await target.objectID.resolve(with: connection)
 
-      guard let property = await object.propertySubject(for: target.propertyID) else {
+      guard let property = object.propertySubject(for: target.propertyID) else {
         logger.error("could not locate property \(target.propertyID) on \(object)")
         throw Ocp1Error.status(.processingFailed)
       }
