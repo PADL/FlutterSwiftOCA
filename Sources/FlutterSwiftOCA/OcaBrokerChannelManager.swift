@@ -65,7 +65,7 @@ public final class OcaBrokerChannelManager: Sendable {
 
   public typealias OnConnectionCallback = @Sendable (
     OcaConnectionBroker.DeviceIdentifier,
-    Ocp1Connection
+    OcaConnection
   ) async throws -> ()
 
   private let onConnectionCallback: OnConnectionCallback?
@@ -83,7 +83,7 @@ public final class OcaBrokerChannelManager: Sendable {
   ///     one connected directly does.
   @FlutterPlatformThreadActor
   public init(
-    connectionOptions: Ocp1ConnectionOptions,
+    connectionOptions: OcaConnectionOptions,
     binaryMessenger: FlutterBinaryMessenger,
     logger: Logger,
     flags: OcaChannelManager.Flags = [],
@@ -142,7 +142,7 @@ public final class OcaBrokerChannelManager: Sendable {
     deviceModels: [OcaModelGUID]? = nil
   ) async throws {
     try await self.init(
-      connectionOptions: Ocp1ConnectionOptions(),
+      connectionOptions: OcaConnectionOptions(),
       binaryMessenger: binaryMessenger,
       logger: logger,
       flags: [],

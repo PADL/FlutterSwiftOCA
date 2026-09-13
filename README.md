@@ -26,10 +26,10 @@ and add `FlutterSwiftOCA` to your target's dependencies. The target must be buil
 Usage
 -----
 
-Create an `OcaChannelManager` on the Flutter platform thread, passing it an `Ocp1Connection` and the engine's binary messenger:
+Create an `OcaChannelManager` on the Flutter platform thread, passing it an `OcaConnection` and the engine's binary messenger:
 
 ```swift
-let connection = try await Ocp1TCPConnection(deviceAddress: address, options: options)
+let connection = try await OcaTCPConnection(deviceAddress: address, options: options)
 
 let channelManager = try await FlutterPlatformThreadActor.run {
   try OcaChannelManager(
@@ -183,7 +183,7 @@ Connection state channel
 
 * Channel is `oca/connection_state`
 * Listener parameter is ignored
-* Event data is `Ocp1ConnectionState` integer raw value
+* Event data is `OcaConnectionState` integer raw value
 
 The raw values are `0` notConnected, `1` connecting, `2` connected, `3` reconnecting, `4` connectionTimedOut, `5` connectionFailed.
 
@@ -227,7 +227,7 @@ let brokerChannelManager = try await OcaBrokerChannelManager(
 )
 ```
 
-It calls the full initialiser with default `Ocp1ConnectionOptions()`, no flags and no connection callback. The `connect` and `disconnect` control methods and `suspend()`/`resume()` remain available, but such an application need not use them.
+It calls the full initialiser with default `OcaConnectionOptions()`, no flags and no connection callback. The `connect` and `disconnect` control methods and `suspend()`/`resume()` remain available, but such an application need not use them.
 
 ### Broker event channel
 

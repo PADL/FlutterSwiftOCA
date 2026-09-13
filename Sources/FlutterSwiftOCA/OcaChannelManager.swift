@@ -44,7 +44,7 @@ private extension OcaRoot {
 
 public final class OcaChannelManager: @unchecked
 Sendable {
-  private let connection: Ocp1Connection
+  private let connection: OcaConnection
   private let binaryMessenger: FlutterBinaryMessenger
   private let logger: Logger
   private let flags: Flags
@@ -110,7 +110,7 @@ Sendable {
 
   @FlutterPlatformThreadActor
   public init(
-    connection: Ocp1Connection,
+    connection: OcaConnection,
     binaryMessenger: FlutterBinaryMessenger,
     logger: Logger,
     flags: Flags = [],
@@ -344,7 +344,7 @@ Sendable {
       }
     }
 
-    func resolve(with connection: Ocp1Connection) async throws -> OcaRoot {
+    func resolve(with connection: OcaConnection) async throws -> OcaRoot {
       let object: OcaRoot
 
       switch self {
@@ -445,7 +445,7 @@ Sendable {
       self.method = method
     }
 
-    func resolve(with connection: Ocp1Connection) async throws -> OcaBlock {
+    func resolve(with connection: OcaConnection) async throws -> OcaBlock {
       guard let block = try await objectID.resolve(with: connection) as? OcaBlock else {
         throw Ocp1Error.objectClassMismatch
       }
@@ -737,7 +737,7 @@ Sendable {
   private func onConnectionStateListen(_: AnyFlutterStandardCodable?) async throws
     -> FlutterEventStream<Int32>
   {
-    await connection.connectionState.map { @OcaConnection [weak self] connectionState in
+    await connection.connectionState.map { @OcaConnectionActor [weak self] connectionState in
       if let self {
         self.logger
           .info(
