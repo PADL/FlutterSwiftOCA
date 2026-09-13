@@ -212,11 +212,49 @@ It browses the network, reports devices to Dart, and creates an `OcaChannelManag
 
 A device identifier is the string `<service-type>#<model-guid>#<serial-number>`, and is used both as the handle in the control channel and as the channel suffix for that device's own channels — so a device's method channel is `oca/<service-type>#<model-guid>#<serial-number>/method`.
 
+Each device is also reported with a URL (see [Device URLs](#device-urls)), so an application can instead connect to it from Dart, over OCP.1 or OCP.2, without going through the broker's `connect`.
+
+### Browse-only initialiser
+
+Applications that connect to devices themselves can use the convenience initialiser, which needs no connection options:
+
+```swift
+let brokerChannelManager = try await OcaBrokerChannelManager(
+  binaryMessenger: engine.binaryMessenger,
+  logger: logger,
+  serviceTypes: [.tcp],
+  deviceModels: [myModelGUID]
+)
+```
+
+It calls the full initialiser with default `Ocp1ConnectionOptions()`, no flags and no connection callback. The `connect` and `disconnect` control methods and `suspend()`/`resume()` remain available, but such an application need not use them.
+
 ### Broker event channel
 
 * Channel is `oca-broker/events`
 * Listener parameter is ignored
-* Event data is a three-element list: `[<event-type>, <device-id>, <device-name>]`, where `<event-type>` is `added`, `removed` or `updated`
+* Event data is a list: `[<event-type>, <device-id>, <device-name>]` or `[<event-type>, <device-id>, <device-name>, <device-url>]`
+  * `<event-type>` is `added`, `removed` or `updated`
+  * `<device-url>` is present for `added` and `updated`. It is omitted for `removed`, and whenever no URL can be built: for example, when the device's service type has no URL, or the device went away before its event was delivered.
+
+A Dart side that reads only the first three elements is unaffected by the URL.
+
+### Device URLs
+
+A device's URL is built from its resolved DNS-SD service info. The scheme depends on the advertised service type:
+
+| Service type | URL |
+| --- | --- |
+| `_oca._tcp` | `ocp1+tcp://<host>:<port>` |
+| `_ocajson._tcp` | `ocp2+tcp://<host>:<port>` |
+| `_ocaws._tcp` | `ocp1+ws://<host>:<port><path>` |
+| `_ocajsonws._tcp` | `ocp2+ws://<host>:<port><path>` |
+
+Other service types, including UDP and secure types, have no URL.
+
+* `<host>` is the device's first resolved address, IPv4 before IPv6, as a numeric host. IPv6 addresses are bracketed. Link-local IPv6 addresses are skipped, because a URL carries no zone to scope them with. If the device has no usable address, `<host>` is its advertised hostname, without the trailing dot.
+* `<port>` is the advertised port.
+* `<path>` is the value of the `path` TXT record. It defaults to `/`, and always starts with `/`.
 
 ### Broker control channel
 
@@ -226,6 +264,7 @@ A device identifier is the string `<service-type>#<model-guid>#<serial-number>`,
   * `connect`, argument is the device identifier — registers the device's channels, then connects it. The channels are in place before the connection is made, so Dart can bind to them and observe the connection state transitions.
   * `disconnect`, argument is the device identifier — disposes the device's channels and disconnects it
   * `list`, argument ignored — re-emits an `added` event for every device already known to the broker, for a Dart side that bound to the event channel late
+* Any other method is reported as not implemented
 
 ### Application lifecycle
 
