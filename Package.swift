@@ -20,6 +20,7 @@ let package = Package(
     .package(url: "https://github.com/apple/swift-async-algorithms", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-log", from: "1.6.2"),
     .package(url: "https://github.com/lhoward/AsyncExtensions", from: "0.9.0"),
+    .package(url: "https://github.com/PADL/SocketAddress", from: "0.5.1"),
     .package(url: "https://github.com/PADL/SwiftOCA", branch: "main"),
     .package(url: "https://github.com/PADL/FlutterSwift", branch: "main"),
   ],
@@ -34,6 +35,7 @@ let package = Package(
         .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
         .product(name: "Logging", package: "swift-log"),
         "AsyncExtensions",
+        "SocketAddress",
         "SwiftOCA",
         "FlutterSwift",
       ],
@@ -44,7 +46,7 @@ let package = Package(
     ),
     .testTarget(
       name: "FlutterSwiftOCATests",
-      dependencies: ["FlutterSwiftOCA"],
+      dependencies: ["FlutterSwiftOCA", "SocketAddress", "SwiftOCA"],
       swiftSettings: [
         .swiftLanguageMode(.v5, .when(platforms: [.macOS, .iOS])),
         .interoperabilityMode(.Cxx, .when(platforms: [.macOS, .iOS, .linux])),

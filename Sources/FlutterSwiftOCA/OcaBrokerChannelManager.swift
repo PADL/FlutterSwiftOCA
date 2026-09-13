@@ -18,12 +18,20 @@
 // now includes Android via NsdManager.
 #if canImport(Darwin) || canImport(dnssd) || os(Android)
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Android)
+import Android
+#endif
 import AsyncAlgorithms
 import AsyncExtensions
 @_spi(FlutterSwiftPrivate)
 import FlutterSwift
 import Foundation
 import Logging
+import SocketAddress
 import Synchronization
 @_spi(SwiftOCAPrivate)
 import SwiftOCA
@@ -32,6 +40,11 @@ public let OcaBrokerChannelPrefix = "oca-broker/"
 
 public protocol OcaBrokerChannelManagerDelegate: AnyObject, Sendable {}
 
+/// Bridges SwiftOCA's DNS-SD device discovery to Dart.
+///
+/// Each discovered device is reported with a URL, so that Dart can connect to
+/// it itself. Connecting through the broker, with the `connect` control method,
+/// remains available.
 public final class OcaBrokerChannelManager: Sendable {
   private let broker: OcaConnectionBroker
   private let binaryMessenger: FlutterBinaryMessenger
@@ -108,6 +121,35 @@ public final class OcaBrokerChannelManager: Sendable {
 
     try eventChannel.allowChannelBufferOverflow(true)
     try controlChannel.setMethodCallHandler(onControl)
+  }
+
+  /// Creates a broker for browsing only, for callers that connect to devices
+  /// themselves using the URL reported with each device.
+  ///
+  /// Connecting through the broker remains available, with default connection
+  /// options, no flags and no connection callback, but such callers need not
+  /// use it.
+  ///
+  /// - Parameters:
+  ///   - serviceTypes: the advertised service types to browse, or `nil` to browse all of them.
+  ///   - deviceModels: restricts discovery to devices advertising one of these model GUIDs, or
+  ///     `nil` to surface every device on the network.
+  @FlutterPlatformThreadActor
+  public convenience init(
+    binaryMessenger: FlutterBinaryMessenger,
+    logger: Logger,
+    serviceTypes: Set<OcaNetworkAdvertisingServiceType>? = nil,
+    deviceModels: [OcaModelGUID]? = nil
+  ) async throws {
+    try await self.init(
+      connectionOptions: Ocp1ConnectionOptions(),
+      binaryMessenger: binaryMessenger,
+      logger: logger,
+      flags: [],
+      serviceTypes: serviceTypes,
+      deviceModels: deviceModels,
+      onConnectionCallback: nil
+    )
   }
 
   /// Distinguishes successive suspend/resume transitions: both walk their
@@ -225,7 +267,7 @@ public final class OcaBrokerChannelManager: Sendable {
       case "list":
         await broker.reenumerateRegisteredDevices()
       default:
-        break
+        throw FlutterSwiftError.methodNotImplemented
       }
       return []
     }
@@ -236,25 +278,29 @@ public final class OcaBrokerChannelManager: Sendable {
     -> FlutterEventStream<AnyFlutterStandardCodable>
   {
     try await throwingFlutterError {
-      await broker.events.compactMap { event in
+      let broker = broker
+      return await broker.events.compactMap { event in
+        let device = event.deviceIdentifier
         let eventTypeString: String
+        let url: String?
 
         switch event.eventType {
         case .deviceAdded:
           eventTypeString = "added"
-        case .deviceRemoved:
-          eventTypeString = "removed"
+          url = await Self.deviceURL(for: device, broker: broker)
         case .deviceUpdated:
           eventTypeString = "updated"
+          url = await Self.deviceURL(for: device, broker: broker)
+        case .deviceRemoved:
+          eventTypeString = "removed"
+          url = nil
         case .connectionStateChanged:
           return nil
         }
 
-        return try AnyFlutterStandardCodable([
-          eventTypeString,
-          event.deviceIdentifier.id,
-          event.deviceIdentifier.name,
-        ])
+        var fields = [eventTypeString, device.id, device.name]
+        if let url { fields.append(url) }
+        return try AnyFlutterStandardCodable(fields)
       }.eraseToAnyAsyncSequence()
     }
   }
@@ -274,6 +320,106 @@ public final class OcaBrokerChannelManager: Sendable {
       )
       logger.trace("throwing \(flutterError)")
       throw flutterError
+    }
+  }
+}
+
+// MARK: - Device URLs
+
+extension OcaBrokerChannelManager {
+  /// The URL Dart connects to `device` with, or `nil` if the broker no longer
+  /// has its service info (it may have gone away since the event was emitted)
+  /// or cannot describe its transport as a URL.
+  private static func deviceURL(
+    for device: OcaConnectionBroker.DeviceIdentifier,
+    broker: OcaConnectionBroker
+  ) async -> String? {
+    guard let serviceInfo = try? await broker.serviceInfo(for: device),
+          let port = try? serviceInfo.port
+    else {
+      return nil
+    }
+
+    return deviceURL(
+      serviceType: serviceInfo.serviceType,
+      addresses: (try? await broker.deviceAddresses(for: device)) ?? [],
+      hostname: try? serviceInfo.hostname,
+      port: port,
+      txtRecords: (try? serviceInfo.txtRecords) ?? [:]
+    )
+  }
+
+  /// Builds a device URL from resolved DNS-SD service info.
+  ///
+  /// The host is the first usable address, in the broker's order (IPv4 before
+  /// IPv6), so that Dart need not resolve a `.local` name itself. Link-local
+  /// IPv6 addresses are skipped, as a URL carries no zone to scope them with.
+  /// Failing an address, the advertised hostname is used.
+  ///
+  /// Only OCP.1 and OCP.2 over TCP and WebSocket have a URL scheme; any other
+  /// service type returns `nil`.
+  static func deviceURL(
+    serviceType: OcaNetworkAdvertisingServiceType,
+    addresses: [Data],
+    hostname: String?,
+    port: UInt16,
+    txtRecords: [String: String]
+  ) -> String? {
+    let scheme: String
+    var path = ""
+
+    switch serviceType {
+    case .tcp:
+      scheme = "ocp1+tcp"
+    case .tcpJson:
+      scheme = "ocp2+tcp"
+    case .tcpWebSocket:
+      scheme = "ocp1+ws"
+      path = webSocketPath(txtRecords: txtRecords)
+    case .tcpWebSocketJson:
+      scheme = "ocp2+ws"
+      path = webSocketPath(txtRecords: txtRecords)
+    default:
+      return nil
+    }
+
+    let hostname = hostname.map { $0.hasSuffix(".") ? String($0.dropLast()) : $0 }
+    guard let host = addresses.lazy.compactMap(urlHost(sockaddr:)).first ?? hostname,
+          !host.isEmpty
+    else {
+      return nil
+    }
+
+    return "\(scheme)://\(host):\(port)\(path)"
+  }
+
+  /// The `path` TXT record, which defaults to `/` and always starts with one.
+  private static func webSocketPath(txtRecords: [String: String]) -> String {
+    guard let path = txtRecords["path"], !path.isEmpty else { return "/" }
+    return path.hasPrefix("/") ? path : "/\(path)"
+  }
+
+  /// A numeric URL host for a `sockaddr`, with IPv6 in brackets; `nil` for a
+  /// link-local IPv6 address or anything that is not IPv4 or IPv6.
+  private static func urlHost(sockaddr bytes: Data) -> String? {
+    guard let address = try? AnySocketAddress(bytes: Array(bytes)),
+          let host = try? address.presentationAddressNoPort
+    else {
+      return nil
+    }
+
+    switch Int32(address.family) {
+    case AF_INET:
+      return host
+    case AF_INET6:
+      let isLinkLocal = address.withSockAddr { sa, size in
+        guard Int(size) >= MemoryLayout<sockaddr_in6>.size else { return true }
+        let sin6 = UnsafeRawPointer(sa).loadUnaligned(as: sockaddr_in6.self)
+        return withUnsafeBytes(of: sin6.sin6_addr) { $0[0] == 0xFE && ($0[1] & 0xC0) == 0x80 }
+      }
+      return isLinkLocal ? nil : "[\(host)]"
+    default:
+      return nil
     }
   }
 }
