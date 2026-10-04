@@ -418,10 +418,15 @@ Sendable {
 
       if let nominalRate = call.arguments {
         logger.trace("setting sample rate on \(objectID) to \(nominalRate)")
-        try await object.set(currentRate: OcaMediaClockRate(nominalRate: OcaFrequency(nominalRate)))
+        // keep the current time source
+        let timeSourceONo = try await object.getCurrentRate().timeSourceONo
+        try await object.setCurrentRate(
+          rate: OcaMediaClockRate(nominalRate: OcaFrequency(nominalRate)),
+          timeSourceONo: timeSourceONo
+        )
         return nominalRate
       } else {
-        let (mediaClockRate, _) = try await object.getCurrentRate()
+        let mediaClockRate = try await object.getCurrentRate().rate
         logger.trace("current sample rate on \(objectID) is \(mediaClockRate.nominalRate)")
         return Double(mediaClockRate.nominalRate)
       }
@@ -464,9 +469,9 @@ Sendable {
       guard let paramDataset = call.arguments else { throw Ocp1Error.status(.parameterError) }
       switch target.method {
       case .apply:
-        try await object.apply(paramDataset: paramDataset)
+        try await object.applyParamDataset(oNo: paramDataset)
       case .store:
-        try await object.store(currentParameterData: paramDataset)
+        try await object.storeCurrentParameterData(oNo: paramDataset)
       default:
         throw Ocp1Error.status(.badMethod)
       }
@@ -487,7 +492,7 @@ Sendable {
         return try await Array(object.fetchCurrentParameterData())
       case .apply:
         guard let arguments = call.arguments else { throw Ocp1Error.status(.parameterError) }
-        try await object.apply(parameterData: OcaLongBlob(arguments))
+        try await object.applyParameterData(data: OcaLongBlob(arguments))
         return []
       case .store:
         throw Ocp1Error.status(.badMethod)
