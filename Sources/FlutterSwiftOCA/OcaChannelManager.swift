@@ -469,9 +469,9 @@ Sendable {
       guard let paramDataset = call.arguments else { throw Ocp1Error.status(.parameterError) }
       switch target.method {
       case .apply:
-        try await object.applyParamDataset(oNo: paramDataset)
+        try await object.applyParamDataset(oNo: OcaONo(paramDataset))
       case .store:
-        try await object.storeCurrentParameterData(oNo: paramDataset)
+        try await object.storeCurrentParameterData(oNo: OcaONo(paramDataset))
       default:
         throw Ocp1Error.status(.badMethod)
       }
