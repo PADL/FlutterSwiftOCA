@@ -37,6 +37,7 @@ let package = Package(
         "AsyncExtensions",
         "SocketAddress",
         "SwiftOCA",
+        .product(name: "SwiftOCADevice", package: "SwiftOCA"),
         "FlutterSwift",
       ],
       swiftSettings: [
